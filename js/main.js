@@ -117,7 +117,7 @@
     if (graph && graph.length) { const pad = new Date(graph[0].date).getUTCDay(); for (let i = 0; i < pad; i++) g.appendChild(el("i")).style.visibility = "hidden"; graph.forEach(x => { const i = el("i"); i.dataset.l = String(x.level | 0).slice(0, 1); i.title = x.date + ": " + x.count; g.appendChild(i); }); gm.textContent = graph.reduce((s, x) => s + x.count, 0) + " " + t("graphTotal"); } else gm.textContent = t("graphFail");
     const f = $("ghFeed"); f.textContent = "";
     if (!events) f.appendChild(el("li", "", t("evFail"))); else if (!events.length) f.appendChild(el("li", "", t("noEv"))); else events.forEach(e => { const li = el("li"); let x = e.type.replace("Event", ""); if (e.type === "PushEvent") x = t("push") + ": " + ((e.payload.commits || []).length || 1); else if (e.type === "CreateEvent") x = t("created") + ": " + (e.payload.ref_type || ""); else if (e.type === "WatchEvent") x = t("star"); li.appendChild(el("b", "", x)); li.append(" · " + e.repo.name + " · " + ago(e.created_at)); f.appendChild(li); });
-    $("ghUpd").textContent = t("ghUpd") + " " + new Date().toLocaleTimeString(lang === "kk" ? "kk-KZ" : lang === "en" ? "en-GB" : "ru-RU");
+    $("ghUpdated").textContent = t("ghUpd") + " " + new Date().toLocaleTimeString(lang === "kk" ? "kk-KZ" : lang === "en" ? "en-GB" : "ru-RU");
   }
 
   async function loadGh(first) {
