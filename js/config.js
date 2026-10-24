@@ -24,7 +24,7 @@ window.CONFIG = {
   ],
 
   // Публичная ссылка сайта после публикации: "https://raiko-cyber.github.io/portfolio/"
-  siteUrl: "",
+  siteUrl: "https://raiko-cyber.github.io/portfolio/",
 
   // Ссылки для 4 карточек проектов (по порядку), можно оставить пустыми
   projectLinks: ["", "", "", ""]
