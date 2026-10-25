@@ -2,17 +2,16 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://avatars.githubusercontent.com; connect-src https://api.github.com https://github-contributions-api.jogruber.de; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://api.github.com https://github-contributions-api.jogruber.de; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Райхан Қайранбекова — Portfolio</title>
+<title>Райхан Кайранбекова — Portfolio</title>
 <meta name="description" content="Портфолио Райхан Қайранбековой: IT, AI, дроны, веб-разработка.">
+<meta name="theme-color" content="#6F4E37">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%236F4E37'/%3E%3Ctext x='32' y='43' font-size='34' text-anchor='middle' font-family='Georgia,serif' fill='%23EAAA00'%3ER%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,600&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
-<meta name="theme-color" content="#6F4E37">
-<meta property="og:title" content="Райхан Қайранбекова — Portfolio"><meta property="og:type" content="website">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%236F4E37'/%3E%3Ctext x='32' y='43' font-size='34' text-anchor='middle' font-family='Georgia,serif' fill='%23EAAA00'%3ER%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -20,26 +19,19 @@
 <header class="nav">
   <a href="#home" class="logo">R.Q</a>
   <div class="lang" id="lang"><button data-l="ru">RU</button><button data-l="en">EN</button><button data-l="kk">ҚАЗ</button></div>
-  <button class="burger" id="burger" aria-label="Меню" aria-expanded="false"><span></span><span></span></button>
-  <nav id="menu">
-    <a href="#about" data-i18n="nAbout"></a><a href="#projects" data-i18n="nProjects"></a><a href="#skills" data-i18n="nSkills"></a>
-    <a href="#education" data-i18n="nEdu"></a><a href="#github" data-i18n="nGh"></a><a href="#contact" data-i18n="nContact"></a><a href="#qr" data-i18n="nQr"></a>
-  </nav>
+  <button class="burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span><span></span></button>
+  <nav id="menu"><a href="#about" data-i18n="nAbout"></a><a href="#projects" data-i18n="nProjects"></a><a href="#contact" data-i18n="nContact"></a></nav>
 </header>
-
-<noscript><p>Для работы сайта включите JavaScript.</p></noscript>
-<main id="top">
+<noscript><p class="ns">Для работы сайта включите JavaScript.</p></noscript>
+<main>
 <section id="home" class="hero">
   <div class="orbit-wrap">
-    <svg class="orbit" viewBox="0 0 400 400" aria-hidden="true">
-    <circle cx="200" cy="200" r="190" class="ring"/><circle cx="200" cy="200" r="130" class="ring r2"/>
-    <g class="spin"><circle cx="200" cy="10" r="6" class="dot"/><path d="M194 10h-18M206 10h18" class="arm"/></g>
-  </svg>
-    <div class="portrait" aria-hidden="false"><span>R.Q</span><img src="assets/photo.jpg" alt="Фото Райхан Қайранбековой"></div>
+    <svg class="orbit" viewBox="0 0 400 400" aria-hidden="true"><circle cx="200" cy="200" r="190" class="ring"/><circle cx="200" cy="200" r="130" class="ring r2"/><g class="spin"><circle cx="200" cy="10" r="6" class="dot"/></g></svg>
+    <div class="portrait"><span>R.Q</span><img src="assets/photo.jpg" alt="Фото Райхан Қайранбековой"></div>
   </div>
   <div class="hero-txt">
     <p class="kicker" data-i18n="kicker"></p>
-    <h1 id="heroName">Райхан<br>Қайранбекова</h1>
+    <h1 id="heroName"></h1>
     <p class="lead" data-i18n="lead"></p>
     <div class="actions">
       <button class="btn gold" id="btnCv" data-i18n="cv"></button>
@@ -51,92 +43,34 @@
 
 <section id="about" class="sec">
   <h2 data-i18n="aboutT"></h2>
-  <div class="about">
-    <figure class="about-photo">
-      <div class="frame"><img src="assets/photo.jpg" alt="Райхан Қайранбекова" width="800" height="800"></div>
-      <p class="student" id="student"></p>
-    </figure>
-    <div class="about-body">
-      <p class="about-intro" data-i18n="aIntro"></p>
-      <div class="langs"><span class="goal-t" data-i18n="aLangT"></span><ul class="chips" id="aboutLang"></ul></div>
-
-      <div class="plant">
-        <div class="stage stage-int">
-          <svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><circle class="node" cx="20" cy="20" r="19"/><path class="st" d="M20 32V19"/><path class="lf" d="M20 22C13 22 9 18 9 12c6 0 11 3 11 10z"/><path class="lf" d="M20 19c0-6 4-10 11-10 0 6-4 10-11 10z"/></svg>
-          <h3 class="sub" data-i18n="aIntT"></h3>
-          <ul class="chips" id="aboutInt"></ul>
-        </div>
-        <div class="stage stage-qual">
-          <svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><circle class="node" cx="20" cy="20" r="19"/><path class="st" d="M20 33V12"/><path class="lf" d="M20 26c-7 0-10-4-10-9 6 0 10 3 10 9z"/><path class="lf" d="M20 21c0-6 3-10 10-10 0 6-3 10-10 10z"/><path class="lf" d="M20 15c-4-1-6-4-6-8 4 0 6 3 6 8z"/></svg>
-          <h3 class="sub" data-i18n="aQualT"></h3>
-          <ul class="qual" id="aboutQual"></ul>
-        </div>
-        <div class="stage stage-goal">
-          <svg class="flower" viewBox="0 0 120 120" aria-hidden="true">
-            <g class="petals">
-              <ellipse cx="60" cy="27" rx="12" ry="23"/>
-              <ellipse cx="60" cy="27" rx="12" ry="23" transform="rotate(45 60 60)"/>
-              <ellipse cx="60" cy="27" rx="12" ry="23" transform="rotate(90 60 60)"/>
-              <ellipse cx="60" cy="27" rx="12" ry="23" transform="rotate(135 60 60)"/>
-              <ellipse cx="60" cy="27" rx="12" ry="23" transform="rotate(180 60 60)"/>
-              <ellipse cx="60" cy="27" rx="12" ry="23" transform="rotate(225 60 60)"/>
-              <ellipse cx="60" cy="27" rx="12" ry="23" transform="rotate(270 60 60)"/>
-              <ellipse cx="60" cy="27" rx="12" ry="23" transform="rotate(315 60 60)"/>
-            </g>
-            <circle class="core" cx="60" cy="60" r="15"/>
-          </svg>
-          <div class="goal"><span class="goal-t" data-i18n="aGoalT"></span><p data-i18n="aGoal"></p></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section id="projects" class="sec"><h2 data-i18n="projT"></h2><div class="grid" id="projectGrid"></div></section>
-
-<section id="skills" class="sec"><h2 data-i18n="skillsT"></h2>
-  <p class="muted" data-i18n="skillsSub"></p>
+  <div class="two"><p data-i18n="a1"></p><p data-i18n="a2"></p></div>
+  <p class="student" id="student"></p>
+  <h3 class="sub" data-i18n="eduT"></h3>
+  <div class="grid" id="eduGrid"></div>
   <ul class="chips" id="chips"></ul>
 </section>
 
-<section id="education" class="sec"><h2 data-i18n="eduT"></h2><div class="grid" id="eduGrid"></div></section>
-
-<section id="github" class="sec"><h2 data-i18n="ghT"></h2>
-  <div id="ghState" class="state"></div>
-  <div id="ghBody" hidden>
-    <div class="gh-top">
-      <img id="ghAvatar" alt="Аватар GitHub" width="88" height="88">
-      <div><h3 id="ghName"></h3><p class="muted" id="ghLogin"></p><p class="muted" id="ghBio"></p></div>
-      <a class="btn gold" id="ghLink" data-i18n="ghView" target="_blank" rel="noopener"></a>
-    </div>
-    <div class="stats" id="ghStats"></div>
-    <h3 class="sub" data-i18n="graphT"></h3>
-    <div class="graph-wrap"><div id="ghGraph" class="graph"></div><p class="muted" id="ghGraphMsg"></p></div>
-    <h3 class="sub" data-i18n="pinT"></h3><div class="grid" id="ghRepos"></div>
-    <h3 class="sub" data-i18n="recT"></h3><ul class="feed" id="ghFeed"></ul>
-    <h3 class="sub" data-i18n="milesT"></h3>
-    <ol class="miles" id="miles"></ol>
-    <p class="muted small"><span data-i18n="ghNote"></span> <a id="ghAch" target="_blank" rel="noopener">Achievements</a></p>
-    <p class="muted small" id="ghUpdated"></p>
+<section id="projects" class="sec">
+  <h2 data-i18n="projT"></h2>
+  <div class="grid" id="projectGrid"></div>
+  <p class="note" data-i18n="webNote"></p>
+  <div id="ghBox" hidden>
+    <h3 class="sub" data-i18n="ghT"></h3><div class="grid" id="ghRepos"></div>
+    <div id="graphBox" hidden><h3 class="sub" data-i18n="graphT"></h3><div class="graph-wrap"><div id="ghGraph" class="graph"></div></div><p class="muted small" id="ghGraphMsg"></p></div>
   </div>
-  
+  <p><a class="btn ghost" id="ghLink" target="_blank" rel="noopener" data-i18n="ghAll"></a></p>
 </section>
 
-<section id="contact" class="sec"><h2 data-i18n="contactT"></h2><div class="grid" id="contactGrid"></div></section>
-
-<section id="qr" class="sec"><h2 data-i18n="qrT"></h2>
-  <div class="qr-box">
-    <div id="qrCanvas" class="qr"></div>
-    <div><p id="qrMsg" class="muted"></p>
-      <div class="actions"><button class="btn gold" id="qrDl" data-i18n="qrDl"></button><button class="btn ghost" id="qrCopy" data-i18n="copy"></button></div></div>
-  </div>
+<section id="contact" class="sec">
+  <h2 data-i18n="contactT"></h2>
+  <a class="tg" id="tgBig" target="_blank" rel="noopener"></a>
+  <ul class="small-links" id="contactSmall"></ul>
+  <div class="qr-card" id="qrCard"><div id="qrBox" class="qr"></div><div><h3 class="qr-t" data-i18n="qrT"></h3><p class="muted" id="qrMsg"></p><button class="btn ghost" id="qrDl" data-i18n="qrDl"></button></div></div>
 </section>
 </main>
-
-<footer class="foot"><span>© <span id="year"></span> <span id="fname"></span></span><a href="#home" id="toTop">↑</a></footer>
+<footer class="foot"><span>© <span id="year"></span> <span id="fname"></span></span><a href="#home" aria-label="Up">↑</a></footer>
 <div id="toast" class="toast" role="status"></div>
 <article id="cv" aria-hidden="true"></article>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/config.js"></script>
