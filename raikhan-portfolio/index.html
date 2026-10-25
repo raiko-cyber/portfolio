@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://api.github.com https://github-contributions-api.jogruber.de; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Райхан Кайранбекова — Portfolio</title>
+<meta name="description" content="Портфолио Райхан Қайранбековой: IT, AI, дроны, веб-разработка.">
+<meta name="theme-color" content="#6F4E37">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%236F4E37'/%3E%3Ctext x='32' y='43' font-size='34' text-anchor='middle' font-family='Georgia,serif' fill='%23EAAA00'%3ER%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,600&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="skip" href="#about">Skip to content</a>
+<header class="nav">
+  <a href="#home" class="logo">R.Q</a>
+  <div class="lang" id="lang"><button data-l="ru">RU</button><button data-l="en">EN</button><button data-l="kk">ҚАЗ</button></div>
+  <button class="burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span><span></span></button>
+  <nav id="menu"><a href="#about" data-i18n="nAbout"></a><a href="#projects" data-i18n="nProjects"></a><a href="#contact" data-i18n="nContact"></a></nav>
+</header>
+<noscript><p class="ns">Для работы сайта включите JavaScript.</p></noscript>
+<main>
+<section id="home" class="hero">
+  <div class="orbit-wrap">
+    <svg class="orbit" viewBox="0 0 400 400" aria-hidden="true"><circle cx="200" cy="200" r="190" class="ring"/><circle cx="200" cy="200" r="130" class="ring r2"/><g class="spin"><circle cx="200" cy="10" r="6" class="dot"/></g></svg>
+    <div class="portrait"><span>R.Q</span><img src="assets/photo.jpg" alt="Фото Райхан Қайранбековой"></div>
+  </div>
+  <div class="hero-txt">
+    <p class="kicker" data-i18n="kicker"></p>
+    <h1 id="heroName"></h1>
+    <p class="lead" data-i18n="lead"></p>
+    <div class="actions">
+      <button class="btn gold" id="btnCv" data-i18n="cv"></button>
+      <button class="btn ghost" id="btnCopy" data-i18n="copy"></button>
+      <a class="btn ghost" href="#contact" data-i18n="write"></a>
+    </div>
+  </div>
+</section>
+
+<section id="about" class="sec">
+  <h2 data-i18n="aboutT"></h2>
+  <div class="two"><p data-i18n="a1"></p><p data-i18n="a2"></p></div>
+  <p class="student" id="student"></p>
+  <h3 class="sub" data-i18n="eduT"></h3>
+  <div class="grid" id="eduGrid"></div>
+  <ul class="chips" id="chips"></ul>
+</section>
+
+<section id="projects" class="sec">
+  <h2 data-i18n="projT"></h2>
+  <div class="grid" id="projectGrid"></div>
+  <p class="note" data-i18n="webNote"></p>
+  <div id="ghBox" hidden>
+    <h3 class="sub" data-i18n="ghT"></h3><div class="grid" id="ghRepos"></div>
+    <div id="graphBox" hidden><h3 class="sub" data-i18n="graphT"></h3><div class="graph-wrap"><div id="ghGraph" class="graph"></div></div><p class="muted small" id="ghGraphMsg"></p></div>
+  </div>
+  <p><a class="btn ghost" id="ghLink" target="_blank" rel="noopener" data-i18n="ghAll"></a></p>
+</section>
+
+<section id="contact" class="sec">
+  <h2 data-i18n="contactT"></h2>
+  <a class="tg" id="tgBig" target="_blank" rel="noopener"></a>
+  <ul class="small-links" id="contactSmall"></ul>
+  <div class="qr-card" id="qrCard"><div id="qrBox" class="qr"></div><div><h3 class="qr-t" data-i18n="qrT"></h3><p class="muted" id="qrMsg"></p><button class="btn ghost" id="qrDl" data-i18n="qrDl"></button></div></div>
+</section>
+</main>
+<footer class="foot"><span>© <span id="year"></span> <span id="fname"></span></span><a href="#home" aria-label="Up">↑</a></footer>
+<div id="toast" class="toast" role="status"></div>
+<article id="cv" aria-hidden="true"></article>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/config.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
