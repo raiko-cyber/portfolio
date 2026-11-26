@@ -118,6 +118,7 @@
   <div class="row">
     <button id="sbDemo">▶ Послушать</button>
     <button id="sbRestart">↺ Сначала</button>
+    <button id="sbRhythm" title="Играть в ритме песни">⏱ Ритм</button>
     <button id="sbLib">🎵 Песни</button>
     <button id="sbExit" title="Выйти из песни">✕</button>
   </div>
@@ -126,7 +127,7 @@
 <div id="lib" role="dialog" aria-label="Библиотека песен">
   <div class="lib-in">
     <div class="lib-head"><h2>🎵 Песни</h2><button id="libClose" aria-label="Закрыть">✕</button></div>
-    <p class="lib-sub">Выбери песню. Нужная струна светится и показывает ноту: проведи по ней пальцем в воздухе или по экрану, и песня пойдёт дальше. Нажми «Послушать», чтобы сначала услышать мелодию.</p>
+    <p class="lib-sub">Выбери песню. Нужная струна светится и показывает ноту: проведи по ней пальцем в воздухе или по экрану, и песня пойдёт дальше. Нажми «Послушать», чтобы сначала услышать мелодию. Стрелка ↑ у ноты значит «та же нота, только выше». Длинная таблетка в ряду нот — нота звучит дольше; включи «⏱ Ритм», чтобы играть в темпе песни.</p>
     <div id="libList"></div>
     <button id="libFree">Свободная игра: натягивать свои струны</button>
   </div>
@@ -281,14 +282,19 @@ function droneStop() {
 /* ---------------- Ноты ---------------- */
 const SEMIS = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22, 24, 27, 29, 31, 34, 36]; // ля-минорная пентатоника от A2
 const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-function noteForLength(L) {
-  const diag = Math.hypot(W, H);
-  let r = (L / diag - 0.06) / 0.7;
+const octMark = o => o >= 5 ? '↑'.repeat(o - 4) : o <= 3 ? '↓'.repeat(4 - o) : '';
+// Нота зависит от длины струны в «ладонях»: так нота не меняется, если отойти от камеры или подойти ближе
+function noteForLength(L, palm) {
+  let r;
+  if (palm && palm > 15) r = (L / palm - 1) / 6.5;
+  else { const diag = Math.hypot(W, H); r = (L / diag - 0.06) / 0.7; }
   r = Math.max(0, Math.min(1, r));
   const idx = Math.round((1 - r) * (SEMIS.length - 1));
   const midi = 45 + SEMIS[idx];
-  return { freq: 440 * Math.pow(2, (midi - 69) / 12), name: NAMES[midi % 12] + (Math.floor(midi / 12) - 1) };
+  const letter = NAMES[midi % 12], oct = Math.floor(midi / 12) - 1;
+  return { freq: 440 * Math.pow(2, (midi - 69) / 12), name: letter + oct, idx, letter, label: SOLF[letter] + octMark(oct) };
 }
+function pill(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
 
 /* ---------------- Руки ---------------- */
 const CONN = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],
@@ -385,6 +391,15 @@ function updateHands(res, now) {
 /* ---------------- Струны ---------------- */
 const strings = [];
 let creating = null;
+// Повернули телефон — свои струны остаются на экране (растягиваются вместе с ним)
+let lastW = W, lastH = H;
+addEventListener('resize', () => {
+  const sx = W / lastW, sy = H / lastH;
+  if (isFinite(sx) && isFinite(sy) && (sx !== 1 || sy !== 1)) {
+    for (const st of strings) { st.a.x *= sx; st.a.y *= sy; st.b.x *= sx; st.b.y *= sy; }
+  }
+  lastW = W; lastH = H;
+});
 
 function startPinch(k) {
   if (mode === 'song') return;
@@ -398,29 +413,32 @@ function endPinch(k) {
 }
 function updateCreating() {
   if (!creating) return;
+  let palm = 0;
   if (creating.mode === 'two') {
     const A = hands.A, B = hands.B;
     if (!(A && B && A.pinch && B.pinch && A.pinchPt && B.pinchPt)) { finalize(); return; }
     creating.a = A.pinchPt; creating.b = B.pinchPt;
+    palm = (A.size + B.size) / 2;
   } else {
     const h = hands[creating.key];
     if (!h || !h.pinch) { finalize(); return; }
     creating.b = h.pinchPt;
+    palm = h.size;
   }
   const L = Math.hypot(creating.b.x - creating.a.x, creating.b.y - creating.a.y);
-  const n = noteForLength(L);
+  const n = noteForLength(L, palm);
   creating.len = L; creating.note = n;
   if (L > 50) { if (!drone) droneStart(n.freq); else droneSet(n.freq); }
 }
 function finalize() {
   const c = creating; creating = null;
   droneStop();
-  if (c && c.a && c.b && c.len > 70) addString(c.a, c.b);
+  if (c && c.a && c.b && c.len > 70) addString(c.a, c.b, c.note);
 }
-function addString(a, b) {
+function addString(a, b, n) {
   const len = Math.hypot(b.x - a.x, b.y - a.y);
-  const n = noteForLength(len);
-  const s = { a: { ...a }, b: { ...b }, len, freq: n.freq, name: n.name, amp: 0, t0: 0, cd: {} };
+  n = n || noteForLength(len);
+  const s = { a: { ...a }, b: { ...b }, len, freq: n.freq, name: n.name, label: n.label, letter: n.letter, amp: 0, t0: 0, cd: {}, arm: {} };
   strings.push(s);
   if (strings.length > 24) strings.shift();
   pluckString(s, 0.5, 0.8);
@@ -445,9 +463,11 @@ function segInter(p, p2, a, b) {
 function checkPlucks(now) {
   for (const k of ['A', 'B']) {
     const h = hands[k];
-    if (!h || !h.pts || !h.prevTip || !h.tip || h.pinch) continue;
+    if (!h || !h.pts || !h.prevTip || !h.tip) continue;
+    if (h.pinch && mode !== 'song') continue;
     if (creating && (creating.mode === 'two' || creating.key === k)) continue;
     const p0 = h.prevTip, p1 = h.tip;
+    rearm(p1, k);
     const sp = Math.hypot(p1.x - p0.x, p1.y - p0.y);
     if (sp < 3) continue;
     for (const s of activeStrings()) {
@@ -534,15 +554,43 @@ function drawString(s, now, preview = false) {
   for (const e of [s.a, s.b]) { ctx.beginPath(); ctx.arc(e.x, e.y, 3.2, 0, Math.PI * 2); ctx.fill(); }
   ctx.restore();
 
-  if (preview && s.name) {
+  if (s.label) { // название ноты на струне
+    const mx = (s.a.x + s.b.x) / 2 + nx * 26, my = (s.a.y + s.b.y) / 2 + ny * 26;
     ctx.save();
-    ctx.font = '600 15px system-ui, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.shadowColor = '#b49cff'; ctx.shadowBlur = 10;
-    ctx.textAlign = 'center';
-    ctx.fillText(s.name, (s.a.x + s.b.x) / 2 + nx * 22, (s.a.y + s.b.y) / 2 + ny * 22);
+    ctx.font = preview ? '800 17px system-ui, sans-serif' : '700 12px system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const tw = ctx.measureText(s.label).width + (preview ? 20 : 12), th = preview ? 30 : 20;
+    ctx.globalAlpha = preview ? 1 : 0.85;
+    ctx.fillStyle = NOTE_COL[s.letter] || '#c9b6ff';
+    pill(mx - tw / 2, my - th / 2, tw, th, th / 2); ctx.fill();
+    ctx.fillStyle = '#16102a';
+    ctx.fillText(s.label, mx, my + 0.5);
     ctx.restore();
   }
+}
+
+// Шкала нот, пока натягиваешь струну: видно, какая нота сейчас и куда тянуть
+function drawRuler(idx) {
+  const n = SEMIS.length, w = Math.min(W - 56, 560), x0 = (W - w) / 2, y = W < 640 ? 150 : 96;
+  ctx.save();
+  ctx.fillStyle = 'rgba(10,6,24,0.62)';
+  pill(x0 - 18, y - 40, w + 36, 76, 20); ctx.fill();
+  for (let i = 0; i < n; i++) {
+    const midi = 45 + SEMIS[i], letter = NAMES[midi % 12];
+    const x = x0 + w * i / (n - 1), cur = i === idx;
+    ctx.globalAlpha = cur ? 1 : 0.5;
+    ctx.beginPath(); ctx.arc(x, y, cur ? 9 : 5, 0, Math.PI * 2);
+    ctx.fillStyle = NOTE_COL[letter]; ctx.fill();
+    if (cur) {
+      ctx.globalAlpha = 1; ctx.font = '800 14px system-ui, sans-serif'; ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(SOLF[letter] + octMark(Math.floor(midi / 12) - 1), x, y - 22);
+    }
+  }
+  ctx.globalAlpha = 0.9; ctx.font = '600 11.5px system-ui, sans-serif'; ctx.fillStyle = '#d4cdea'; ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left'; ctx.fillText('← длиннее = ниже', x0, y + 22);
+  ctx.textAlign = 'right'; ctx.fillText('короче = выше →', x0 + w, y + 22);
+  ctx.restore();
 }
 
 function drawHands(now) {
@@ -628,6 +676,7 @@ const SONGS = [
   { id: 'joy', cat: '🎼 Классика', em: '🎻', title: 'Ода к радости', sub: 'Л. ван Бетховен', level: 'средне', beat: 400,
     seq: 'E4:1 E4:1 F4:1 G4:1 G4:1 F4:1 E4:1 D4:1 C4:1 C4:1 D4:1 E4:1 E4:1.5 D4:.5 D4:2 | E4:1 E4:1 F4:1 G4:1 G4:1 F4:1 E4:1 D4:1 C4:1 C4:1 D4:1 E4:1 D4:1.5 C4:.5 C4:2' },
 ];
+function plural(n, one, few, many) { const a = n % 10, b = n % 100; return a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many; }
 function midiOf(n) { return 12 * (parseInt(n.slice(-1), 10) + 1) + { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[n[0]]; }
 function freqOf(n) { return 440 * Math.pow(2, (midiOf(n) - 69) / 12); }
 for (const s of SONGS) {
@@ -640,7 +689,7 @@ for (const s of SONGS) {
   }
 }
 
-let mode = 'free', song = null, demo = null, laneY = 120, noCam = false;
+let mode = 'free', song = null, demo = null, laneY = 120, noCam = false, rhythmOn = false, lastPointerT = 0;
 const sStrings = [];
 const songbarEl = document.getElementById('songbar');
 const libEl = document.getElementById('lib');
@@ -661,14 +710,23 @@ function layoutSong() {
   const K = song.keys.length;
   const span = Math.min(W * 0.84, (K - 1) * 120);
   const x0 = (W - span) / 2;
+  const same = sStrings.length === K && sStrings.every((st, i) => st.key === song.keys[i]);
+  if (same) { // только сдвинуть, не теряя состояния струн
+    sStrings.forEach((st, i) => {
+      const x = K > 1 ? x0 + span * i / (K - 1) : W / 2;
+      st.a = { x, y: top }; st.b = { x, y: bottom }; st.len = bottom - top;
+    });
+    return;
+  }
   sStrings.length = 0;
   song.keys.forEach((key, i) => {
     const x = K > 1 ? x0 + span * i / (K - 1) : W / 2;
     sStrings.push({ a: { x, y: top }, b: { x, y: bottom }, len: bottom - top, key, freq: freqOf(key),
-                    name: key, label: song.labels[key], col: NOTE_COL[key[0]], amp: 0, t0: 0, cd: {} });
+                    name: key, label: song.labels[key], col: NOTE_COL[key[0]], amp: 0, t0: 0, cd: {}, arm: {} });
   });
 }
 addEventListener('resize', () => { if (song) requestAnimationFrame(layoutSong); });
+if (window.ResizeObserver) new ResizeObserver(() => { if (song) layoutSong(); }).observe(songbarEl); // панель стала выше/ниже — струны подвинутся
 
 function buildLib() {
   const list = document.getElementById('libList');
@@ -682,7 +740,7 @@ function buildLib() {
       const em = document.createElement('span'); em.className = 'em'; em.textContent = s.em;
       const t = document.createElement('span');
       const bt = document.createElement('b'); bt.textContent = s.title;
-      const sm = document.createElement('small'); sm.textContent = `${s.sub} · ${s.keys.length} нот · ${s.level}`;
+      const sm = document.createElement('small'); sm.textContent = `${s.sub} · ${s.keys.length} ${plural(s.keys.length, 'струна', 'струны', 'струн')} · ${s.level}`;
       const dots = document.createElement('span'); dots.className = 'dots';
       for (const k of s.keys) { const i = document.createElement('i'); i.style.background = NOTE_COL[k[0]]; dots.appendChild(i); }
       t.append(bt, sm, dots); b.append(em, t);
@@ -701,7 +759,7 @@ function closeLib() { if (noCam && mode !== 'song') return; libEl.style.display 
 
 function startSong(id) {
   const base = SONGS.find(s => s.id === id);
-  song = { ...base, idx: 0, done: false };
+  song = { ...base, idx: 0, done: false, readyAt: 0, waitFrom: 0, lastHit: 0, ticked: true, earlyT: 0 };
   mode = 'song'; demo = null; creating = null; droneStop();
   libEl.style.display = 'none'; winEl.style.display = 'none';
   btnsEl.style.display = 'none'; hudEl.style.display = 'none';
@@ -709,7 +767,7 @@ function startSong(id) {
   updateSongbar();
   layoutSong();
 }
-function restartSong() { if (!song) return; demo = null; song.idx = 0; song.done = false; winEl.style.display = 'none'; updateSongbar(); }
+function restartSong() { if (!song) return; demo = null; Object.assign(song, { idx: 0, done: false, readyAt: 0, ticked: true }); winEl.style.display = 'none'; updateSongbar(); }
 function exitSong() {
   mode = 'free'; song = null; demo = null; sStrings.length = 0;
   songbarEl.style.display = 'none'; winEl.style.display = 'none';
@@ -727,9 +785,14 @@ function updateSongbar() {
   const d = document.getElementById('sbDemo');
   d.textContent = demo ? '■ Стоп' : '▶ Послушать';
   d.classList.toggle('on', !!demo);
+  const r = document.getElementById('sbRhythm');
+  r.classList.toggle('on', rhythmOn);
+  r.textContent = rhythmOn ? '⏱ Ритм: вкл' : '⏱ Ритм';
   document.getElementById('sbHint').textContent = demo
-    ? 'Слушай и смотри, какие струны загораются'
-    : 'Проведи пальцем по светящейся струне — в воздухе или по экрану';
+    ? 'Слушай и смотри, какие струны загораются. Длинная таблетка — нота дольше'
+    : rhythmOn
+      ? 'Играй, когда таблетка заполнится и щёлкнет. Длинная таблетка — жди дольше'
+      : 'Проведи пальцем по светящейся струне — в воздухе или по экрану';
 }
 
 function toggleDemo() {
@@ -763,24 +826,49 @@ function finishSong() {
 }
 
 function pointOn(s, u) { return { x: s.a.x + (s.b.x - s.a.x) * u, y: s.a.y + (s.b.y - s.a.y) * u }; }
+// Струна снова «взводится», только когда палец отошёл от неё: дрожание руки у струны не играет ноту много раз
+function rearm(p, k) {
+  for (const s of activeStrings()) {
+    if (s.arm && s.arm[k] === false && distToSeg(p, s.a, s.b) > 18) s.arm[k] = true;
+  }
+}
+function beatMs() { return song.beat * (rhythmOn ? 1.25 : 1); }
 function hitString(s, u, vel, k, now) {
+  if (!s.arm) s.arm = {};
+  if (s.arm[k] === false) return;
   if (now - (s.cd[k] || 0) < (mode === 'song' ? 220 : 180)) return;
   s.cd[k] = now;
+  s.arm[k] = false;
   if (mode !== 'song') {
     pluckString(s, u, vel);
     burst(pointOn(s, u), 8 + Math.floor(vel * 14));
     return;
   }
   const tgt = targetKey();
-  if (!demo && tgt && s.key === tgt) {
+  const early = rhythmOn && now < song.readyAt - 0.15 * beatMs();
+  if (!demo && tgt && s.key === tgt && now - (song.lastHit || 0) > 110 && !early) {
+    const d = song.notes[song.idx].d;
     pluckString(s, u, Math.max(0.6, vel));
     burst(pointOn(s, u), 18);
+    song.lastHit = now;
+    song.waitFrom = now;
+    song.readyAt = now + d * beatMs();
+    song.ticked = false;
     song.idx++;
     if (song.idx >= song.notes.length) finishSong();
     updateSongbar();
   } else {
-    s.amp = 3; s.t0 = now; // чужая струна только чуть дрожит, без звука
+    if (early && s.key === tgt) song.earlyT = now;
+    s.amp = 3; s.t0 = now; // чужая струна (или слишком рано) — только дрожит, без звука
   }
+}
+function tickSound() {
+  if (!ac) return;
+  const t = ac.currentTime;
+  const o = ac.createOscillator(); o.type = 'sine'; o.frequency.value = 1320;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.09);
 }
 
 function projU(p, a, b) {
@@ -794,6 +882,8 @@ const ptrs = new Map();
 cv.addEventListener('pointerdown', e => {
   const p = { x: e.clientX, y: e.clientY };
   ptrs.set(e.pointerId, p);
+  lastPointerT = performance.now();
+  for (const s of activeStrings()) if (s.arm) s.arm['p' + e.pointerId] = true; // касание — всегда осознанное
   let best = null, bd = 26;
   for (const s of activeStrings()) { const d = distToSeg(p, s.a, s.b); if (d < bd) { bd = d; best = s; } }
   if (best) hitString(best, projU(p, best.a, best.b), 0.75, 'p' + e.pointerId, performance.now());
@@ -802,6 +892,7 @@ cv.addEventListener('pointermove', e => {
   const p0 = ptrs.get(e.pointerId);
   if (!p0) return;
   const p1 = { x: e.clientX, y: e.clientY }, now = performance.now();
+  rearm(p1, 'p' + e.pointerId);
   const sp = Math.hypot(p1.x - p0.x, p1.y - p0.y);
   for (const s of activeStrings()) {
     const u = segInter(p0, p1, s.a, s.b);
@@ -811,7 +902,7 @@ cv.addEventListener('pointermove', e => {
 });
 for (const t of ['pointerup', 'pointercancel', 'pointerleave']) cv.addEventListener(t, e => ptrs.delete(e.pointerId));
 
-function drawSongString(s, now, target) {
+function drawSongString(s, now, target, waiting) {
   const dx = s.b.x - s.a.x, dy = s.b.y - s.a.y;
   const L = Math.hypot(dx, dy) || 1;
   const nx = -dy / L, ny = dx / L;
@@ -820,22 +911,23 @@ function drawSongString(s, now, target) {
   const ph = Math.sin(t * 2 * Math.PI * Math.min(14, s.freq / 25));
   const disp = u => A * ph * Math.sin(Math.PI * u);
   const N = Math.max(12, Math.floor(L / 10));
-  const pulse = 0.5 + 0.5 * Math.sin(now / 170);
+  const hot = target && !waiting;               // пора играть эту струну
+  const pulse = hot ? 0.5 + 0.5 * Math.sin(now / 170) : 0;
   const hit = Math.exp(-t * 1.6);
-  const alpha = target ? 1 : Math.min(1, 0.4 + 0.6 * hit);
+  const alpha = hot ? 1 : target ? 0.8 : Math.min(1, 0.4 + 0.6 * hit);
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   ctx.lineCap = 'round';
   ctx.strokeStyle = s.col; ctx.shadowColor = s.col;
-  ctx.globalAlpha = alpha * (target ? 0.5 : 0.28);
-  ctx.lineWidth = target ? 14 + 10 * pulse : 8;
-  ctx.shadowBlur = target ? 34 : 10;
+  ctx.globalAlpha = alpha * (hot ? 0.5 : target ? 0.35 : 0.28);
+  ctx.lineWidth = hot ? 14 + 10 * pulse : target ? 11 : 8;
+  ctx.shadowBlur = hot ? 34 : target ? 16 : 10;
   stringPath(s, disp, dx, dy, nx, ny, N); ctx.stroke();
   ctx.globalAlpha = alpha;
   ctx.lineWidth = target ? 3.4 : 2.2;
-  ctx.strokeStyle = target ? '#ffffff' : s.col;
-  ctx.shadowBlur = target ? 18 : 6;
+  ctx.strokeStyle = hot ? '#ffffff' : s.col;
+  ctx.shadowBlur = hot ? 18 : 6;
   stringPath(s, disp, dx, dy, nx, ny, N); ctx.stroke();
   ctx.fillStyle = s.col;
   for (const e of [s.a, s.b]) { ctx.beginPath(); ctx.arc(e.x, e.y, 4, 0, Math.PI * 2); ctx.fill(); }
@@ -846,13 +938,13 @@ function drawSongString(s, now, target) {
   ctx.save();
   ctx.globalAlpha = target ? 1 : 0.8;
   ctx.beginPath(); ctx.arc(s.b.x, by, r, 0, Math.PI * 2);
-  ctx.fillStyle = s.col; ctx.shadowColor = s.col; ctx.shadowBlur = target ? 22 : 0; ctx.fill();
+  ctx.fillStyle = s.col; ctx.shadowColor = s.col; ctx.shadowBlur = hot ? 22 : 0; ctx.fill();
   ctx.shadowBlur = 0;
   ctx.fillStyle = '#16102a';
   ctx.font = `800 ${target ? 13.5 : 11.5}px system-ui, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(s.label, s.b.x, by + 0.5);
-  if (target && !demo) { // стрелка «сюда»
+  if (hot && !demo) { // стрелка «сюда»
     const ay = s.a.y - 16 - 9 * pulse;
     ctx.globalAlpha = 1; ctx.fillStyle = '#ffffff'; ctx.shadowColor = s.col; ctx.shadowBlur = 16;
     ctx.beginPath(); ctx.moveTo(s.a.x - 12, ay - 14); ctx.lineTo(s.a.x + 12, ay - 14); ctx.lineTo(s.a.x, ay); ctx.closePath(); ctx.fill();
@@ -860,32 +952,55 @@ function drawSongString(s, now, target) {
   ctx.restore();
 }
 
+// Ряд следующих нот. Ширина «таблетки» = длительность ноты: длинная таблетка — нота звучит дольше
+function laneItemW(d, first) {
+  const base = first ? 46 : 34;
+  return d > 1 ? base + (d - 1) * (first ? 26 : 20) : d < 1 ? base * 0.82 : base;
+}
 function drawLane(now) {
   if (!song || song.done) return;
   const i0 = demo ? demo.i : song.idx;
-  const max = W < 520 ? 6 : 9;
-  const items = song.notes.slice(i0, i0 + max);
+  const gap = 8, maxW = W - 24;
+  const items = [];
+  let tot = 0;
+  for (let j = 0; i0 + j < song.notes.length && j < 12; j++) {
+    const n = song.notes[i0 + j], w = laneItemW(n.d, j === 0);
+    if (tot + w > maxW) break;
+    items.push({ n, w }); tot += w + gap;
+  }
   if (!items.length) return;
-  const gap = W < 520 ? 48 : 58;
-  let x = W / 2 - ((items.length - 1) * gap) / 2;
+  tot -= gap;
+  let x = (W - tot) / 2;
+  const waiting = rhythmOn && !demo && now < song.readyAt;
   const pulse = 0.5 + 0.5 * Math.sin(now / 170);
   ctx.save();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  items.forEach((n, j) => {
-    const first = j === 0, r = first ? 22 + 2 * pulse : 16;
-    ctx.globalAlpha = first ? 1 : Math.max(0.45, 0.9 - j * 0.09);
-    ctx.beginPath(); ctx.arc(x, laneY, r, 0, Math.PI * 2);
-    ctx.fillStyle = NOTE_COL[n.n[0]];
-    ctx.shadowColor = NOTE_COL[n.n[0]]; ctx.shadowBlur = first ? 22 : 0;
-    ctx.fill();
-    if (first) { ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke(); }
+  items.forEach(({ n, w }, j) => {
+    const first = j === 0, h = first ? 46 : 34, col = NOTE_COL[n.n[0]];
+    ctx.globalAlpha = first ? 1 : Math.max(0.45, 0.9 - j * 0.07);
+    ctx.fillStyle = col; ctx.shadowColor = col;
+    ctx.shadowBlur = first && !waiting ? 14 + 10 * pulse : 0;
+    pill(x, laneY - h / 2, w, h, h / 2); ctx.fill();
     ctx.shadowBlur = 0;
+    if (first && waiting) { // «заряжается»: тёмная часть уменьшается, когда пусто — пора играть
+      const total = Math.max(1, song.readyAt - song.waitFrom);
+      const pr = Math.max(0, Math.min(1, 1 - (song.readyAt - now) / total));
+      ctx.save(); pill(x, laneY - h / 2, w, h, h / 2); ctx.clip();
+      ctx.fillStyle = 'rgba(10,6,24,0.62)'; ctx.fillRect(x + w * pr, laneY - h / 2, w * (1 - pr), h);
+      ctx.restore();
+    }
+    if (first) { pill(x, laneY - h / 2, w, h, h / 2); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke(); }
     ctx.globalAlpha = first ? 1 : Math.max(0.55, 1 - j * 0.08);
     ctx.fillStyle = '#16102a';
     ctx.font = `800 ${first ? 12.5 : 10.5}px system-ui, sans-serif`;
-    ctx.fillText(song.labels[n.n], x, laneY + 0.5);
-    x += gap;
+    ctx.fillText(song.labels[n.n], x + w / 2, laneY + 0.5);
+    x += w + gap;
   });
+  if (song.earlyT && now - song.earlyT < 800) {
+    ctx.globalAlpha = 1 - (now - song.earlyT) / 800;
+    ctx.font = '800 14px system-ui, sans-serif'; ctx.fillStyle = '#ffd27a';
+    ctx.fillText('Подожди, рано!', W / 2, laneY - 34);
+  }
   ctx.restore();
 }
 
@@ -897,6 +1012,7 @@ document.getElementById('sbDemo').onclick = toggleDemo;
 document.getElementById('sbRestart').onclick = restartSong;
 document.getElementById('sbLib').onclick = openLib;
 document.getElementById('sbExit').onclick = exitSong;
+document.getElementById('sbRhythm').onclick = () => { rhythmOn = !rhythmOn; if (song) { song.readyAt = 0; song.ticked = true; } updateSongbar(); };
 document.getElementById('winAgain').onclick = restartSong;
 document.getElementById('winLib').onclick = () => { winEl.style.display = 'none'; openLib(); };
 addEventListener('keydown', e => { if (e.code === 'Escape' && libEl.style.display === 'flex') closeLib(); });
@@ -941,14 +1057,27 @@ function loop() {
 
   if (mode === 'song') {
     tickDemo(now);
+    const waiting = rhythmOn && !demo && song && now < song.readyAt;
+    if (rhythmOn && song && !song.ticked && !waiting && !song.done) { song.ticked = true; tickSound(); }
     const tk = targetKey();
-    for (const s of sStrings) drawSongString(s, now, s.key === tk);
+    for (const s of sStrings) drawSongString(s, now, s.key === tk, waiting);
     drawLane(now);
   } else {
     for (const s of strings) drawString(s, now);
     if (creating && creating.a && creating.b && creating.len > 20) {
-      drawString({ a: creating.a, b: creating.b, freq: creating.note.freq, name: creating.note.name, t0: now }, now, true);
+      const n = creating.note;
+      drawString({ a: creating.a, b: creating.b, freq: n.freq, name: n.name, label: n.label, letter: n.letter, t0: now }, now, true);
+      drawRuler(n.idx);
     }
+  }
+  if (landmarker && !noCam && now - lastPointerT > 6000 && now - Math.max(hands.A ? hands.A.seen : 0, hands.B ? hands.B.seen : 0) > 2500) {
+    ctx.save();
+    ctx.font = '700 16px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const msg = '✋ Покажи руку в камеру';
+    const tw = ctx.measureText(msg).width + 28;
+    ctx.fillStyle = 'rgba(10,6,24,0.6)'; pill(W / 2 - tw / 2, H * 0.5 - 20, tw, 40, 20); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.fillText(msg, W / 2, H * 0.5 + 0.5);
+    ctx.restore();
   }
   drawParticles(dt);
   drawHands(now);
@@ -1001,6 +1130,7 @@ function errorText(e) {
   if (n === 'NotAllowedError') return 'Браузер не дал доступ к камере. Разрешите камеру (значок слева от адреса) и нажмите ещё раз.';
   if (n === 'NotReadableError' || n === 'TrackStartError') return 'Камера занята другой программой. Закройте TouchDesigner, Zoom, «Камеру» или «Параметры» и нажмите ещё раз.';
   if (n === 'NotFoundError') return 'Камера не найдена.';
+  if (n === 'NoMedia') return 'Этот браузер не даёт камеру. Если ссылка открылась внутри Telegram, Instagram или WhatsApp — нажми «⋮» или «…» и выбери «Открыть в браузере» (Chrome или Safari). Или нажми «Играть пальцем по экрану».';
   if (n === 'Insecure') return 'Камера работает только по ссылке https://… Открой страницу по защищённой ссылке, а не как файл.';
   return 'Не удалось запустить: ' + (e && e.message ? e.message : e) + '. Проверьте интернет и нажмите ещё раз.';
 }
@@ -1022,9 +1152,8 @@ document.getElementById('go').onclick = async () => {
   statusEl.style.color = '#d4cdea';
   statusEl.textContent = 'Включаю камеру…';
   try {
-    if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      throw { name: 'Insecure' };
-    }
+    if (!window.isSecureContext) throw { name: 'Insecure' };
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw { name: 'NoMedia' };
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
     if (!ac) initAudio();
     await ac.resume();
