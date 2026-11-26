@@ -26,6 +26,48 @@
   #btns button{background:rgba(0,0,0,.5);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:8px 14px;font-size:13px;cursor:pointer;min-height:40px;-webkit-tap-highlight-color:transparent}
   #btns button:hover{background:rgba(255,255,255,.15)}
   #info{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:5;font-size:12px;color:rgba(255,255,255,.55)}
+  #btns #songsBtn{background:#fff;color:#111;border-color:#fff;font-weight:700;box-shadow:0 0 18px rgba(200,180,255,.7)}
+  #touchgo{background:transparent;color:#e9e2ff;border:1px solid rgba(255,255,255,.4);border-radius:999px;padding:11px 22px;font-size:15px;cursor:pointer}
+  #songbar{position:fixed;left:max(12px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top));z-index:6;display:none;
+    background:rgba(10,6,24,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);
+    border-radius:18px;padding:10px 12px;max-width:min(560px,calc(100vw - 24px))}
+  #sbTitle{font-weight:700;font-size:16px;line-height:1.3}
+  #sbCount{font-weight:500;color:#cfc4ff;margin-left:6px;font-size:14px;white-space:nowrap}
+  #sbProg{height:5px;border-radius:9px;background:rgba(255,255,255,.15);margin:8px 0 6px;overflow:hidden}
+  #sbProg i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff5a5a,#ffe04a,#5be37d,#3fc8ff,#c27bff);transition:width .2s}
+  #sbHint{font-size:12.5px;color:#d4cdea;margin-bottom:8px}
+  #songbar .row{display:flex;gap:6px;flex-wrap:wrap}
+  #songbar button,#win button,#lib button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  #songbar .row button{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:7px 13px;font-size:14px;min-height:40px}
+  #songbar .row button.on{background:#fff;color:#111}
+  #lib{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:16px;
+    background:rgba(4,2,12,.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .lib-in{width:100%;max-width:760px;max-height:100%;overflow:auto;background:#140d2b;border:1px solid rgba(255,255,255,.14);border-radius:24px;padding:20px 20px 22px}
+  .lib-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .lib-head h2{margin:0;font-size:26px}
+  #libClose{background:rgba(255,255,255,.1);color:#fff;border:0;border-radius:999px;width:44px;height:44px;font-size:18px}
+  .lib-sub{color:#cfc6ea;font-size:14.5px;line-height:1.5;margin:8px 0 6px}
+  .cat{margin:18px 0 8px;font-weight:700;font-size:15px;color:#e9e2ff}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+  .song{display:flex;gap:12px;align-items:center;text-align:left;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:12px 14px;min-height:72px}
+  .song:hover,.song:focus-visible{background:rgba(255,255,255,.13);outline:none}
+  .song .em{font-size:30px;line-height:1}
+  .song b{display:block;font-size:15.5px;line-height:1.25}
+  .song small{display:block;color:#b9aedb;font-size:12.5px;margin-top:3px}
+  .dots{display:flex;gap:3px;margin-top:6px}
+  .dots i{width:9px;height:9px;border-radius:50%;display:block}
+  #libFree{margin-top:18px;width:100%;background:transparent;color:#e9e2ff;border:1px dashed rgba(255,255,255,.35);border-radius:14px;padding:12px;font-size:14.5px}
+  @media (max-width:420px){#songbar .row button{padding:6px 10px;font-size:13px}#songbar{padding:9px 10px}}
+  @media (max-height:520px){#sbHint{display:none}#sbProg{margin:6px 0}#songbar{padding:7px 10px}#songbar .row button{min-height:34px;padding:5px 11px}}
+  #win{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:15;display:none;text-align:center;
+    background:rgba(16,10,36,.88);border:1px solid rgba(255,255,255,.2);border-radius:24px;padding:24px 26px;width:min(380px,calc(100vw - 32px));
+    box-shadow:0 0 60px rgba(190,160,255,.45)}
+  #win .big{font-size:54px;line-height:1}
+  #win h3{margin:10px 0 6px;font-size:24px}
+  #win p{margin:0 0 16px;color:#d4cdea}
+  #win .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  #win button{border-radius:999px;padding:11px 18px;font-size:15px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);color:#fff;min-height:44px}
+  #win button.main{background:#fff;color:#111;border-color:#fff;font-weight:700}
   .phone{display:none}
   @media (pointer:coarse){.desk{display:none}.phone{display:inline}}
   @media (max-width:640px){
@@ -45,8 +87,10 @@
 <div id="start">
   <h1>Воздушные струны</h1>
   <p>Натягивай светящиеся струны пальцами и играй на них прямо в воздухе. Нужны камера и включённый звук.</p>
+  <p>🎵 Внутри есть песни: «С днём рождения», новогодние и детские. Нужная струна сама подсвечивается.</p>
   <p class="phone">📱 Поставь телефон вертикально на подставку или прислони к чему-нибудь — обе руки должны быть в кадре. На iPhone выключи беззвучный режим.</p>
   <button id="go">Включить камеру и звук</button>
+  <button id="touchgo">👆 Играть пальцем по экрану (без камеры)</button>
   <div id="status"></div>
 </div>
 
@@ -57,13 +101,45 @@
   ☝️ Проведи указательным пальцем сквозь струну — она зазвучит<br>
   🫰 Щёлкни пальцами (большой + средний) — искры побегут по всем струнам<br>
   Длинная струна звучит ниже, короткая — выше.<br>
+  🎵 Кнопка «Песни»: выбери песню и играй по светящимся струнам<br>
   <span class="desk"><span class="k">Z</span> отменить &nbsp;·&nbsp; <span class="k">C</span> очистить &nbsp;·&nbsp; <span class="k">H</span> скрыть подсказку</span><span class="phone">Кнопки сверху: отменить, очистить, скрыть подсказку</span>
 </div>
 <div id="btns">
+  <button id="songsBtn">🎵 Песни</button>
   <button id="undo">Отменить</button>
   <button id="clear">Очистить</button>
   <button id="help">Подсказка</button>
   <button id="full" style="display:none">⛶</button>
+</div>
+<div id="songbar">
+  <div id="sbTitle"></div>
+  <div id="sbProg"><i></i></div>
+  <div id="sbHint">Проведи пальцем по светящейся струне — в воздухе или по экрану</div>
+  <div class="row">
+    <button id="sbDemo">▶ Послушать</button>
+    <button id="sbRestart">↺ Сначала</button>
+    <button id="sbLib">🎵 Песни</button>
+    <button id="sbExit" title="Выйти из песни">✕</button>
+  </div>
+</div>
+
+<div id="lib" role="dialog" aria-label="Библиотека песен">
+  <div class="lib-in">
+    <div class="lib-head"><h2>🎵 Песни</h2><button id="libClose" aria-label="Закрыть">✕</button></div>
+    <p class="lib-sub">Выбери песню. Нужная струна светится и показывает ноту: проведи по ней пальцем в воздухе или по экрану, и песня пойдёт дальше. Нажми «Послушать», чтобы сначала услышать мелодию.</p>
+    <div id="libList"></div>
+    <button id="libFree">Свободная игра: натягивать свои струны</button>
+  </div>
+</div>
+
+<div id="win">
+  <div class="big">🎉</div>
+  <h3>Молодец!</h3>
+  <p id="winText"></p>
+  <div class="row">
+    <button id="winAgain" class="main">Ещё раз</button>
+    <button id="winLib">Другая песня</button>
+  </div>
 </div>
 <div id="info"></div>
 
@@ -311,6 +387,7 @@ const strings = [];
 let creating = null;
 
 function startPinch(k) {
+  if (mode === 'song') return;
   const other = hands[k === 'A' ? 'B' : 'A'];
   if (other && other.pinch && other.pts) creating = { mode: 'two' };
   else if (!creating) creating = { mode: 'one', key: k, a: { ...hands[k].pinchPt } };
@@ -373,14 +450,11 @@ function checkPlucks(now) {
     const p0 = h.prevTip, p1 = h.tip;
     const sp = Math.hypot(p1.x - p0.x, p1.y - p0.y);
     if (sp < 3) continue;
-    for (const s of strings) {
+    for (const s of activeStrings()) {
       const u = segInter(p0, p1, s.a, s.b);
       if (u === null) continue;
-      if (now - (s.cd[k] || 0) < 180) continue;
-      s.cd[k] = now;
       const vel = Math.min(1, sp / 60);
-      pluckString(s, u, 0.35 + vel * 0.65);
-      burst({ x: s.a.x + (s.b.x - s.a.x) * u, y: s.a.y + (s.b.y - s.a.y) * u }, 8 + Math.floor(vel * 16));
+      hitString(s, u, 0.35 + vel * 0.65, k, now);
     }
   }
 }
@@ -396,6 +470,7 @@ function burst(P, n) {
   }
 }
 function snap(P) {
+  if (mode === 'song') return;
   burst(P, 34);
   sparkSound();
   strings.forEach((s, i) => {
@@ -533,6 +608,300 @@ function drawParticles(dt) {
   ctx.restore();
 }
 
+/* ---------------- Песни ---------------- */
+const SOLF = { C: 'До', D: 'Ре', E: 'Ми', F: 'Фа', G: 'Соль', A: 'Ля', B: 'Си' };
+const NOTE_COL = { C: '#ff5a5a', D: '#ffa23a', E: '#ffe04a', F: '#5be37d', G: '#3fc8ff', A: '#7d8bff', B: '#c27bff' };
+// Мелодии (общественное достояние). Запись: нота:доли (1 = четверть)
+const SONGS = [
+  { id: 'bday', cat: '🎂 День рождения', em: '🎂', title: 'С днём рождения тебя', sub: 'Happy Birthday', level: 'посложнее', beat: 430,
+    seq: 'G4:.75 G4:.25 A4:1 G4:1 C5:1 B4:2 | G4:.75 G4:.25 A4:1 G4:1 D5:1 C5:2 | G4:.75 G4:.25 G5:1 E5:1 C5:1 B4:1 A4:2 | F5:.75 F5:.25 E5:1 C5:1 D5:1 C5:3' },
+  { id: 'elka', cat: '🎄 Новый год', em: '🎄', title: 'В лесу родилась ёлочка', sub: 'музыка Л. Бекмана', level: 'средне', beat: 380,
+    seq: 'G4:1 E4:1 E4:1 D4:1 E4:1 C4:1 G3:1 G3:1 | G4:1 E4:1 E4:1 F4:1 D4:1 G4:3 | G4:1 A4:1 A4:1 F4:1 F4:1 E4:1 D4:1 C4:1 | C4:1 E4:1 E4:1 D4:1 E4:1 C4:3' },
+  { id: 'jingle', cat: '🎄 Новый год', em: '🔔', title: 'Jingle Bells', sub: 'Бубенцы', level: 'средне', beat: 300,
+    seq: 'E4:1 E4:1 E4:2 | E4:1 E4:1 E4:2 | E4:1 G4:1 C4:1.5 D4:.5 | E4:4 | F4:1 F4:1 F4:1.5 F4:.5 | F4:1 E4:1 E4:1 E4:.5 E4:.5 | E4:1 D4:1 D4:1 E4:1 | D4:2 G4:2 | E4:1 E4:1 E4:2 | E4:1 E4:1 E4:2 | E4:1 G4:1 C4:1.5 D4:.5 | E4:4 | F4:1 F4:1 F4:1.5 F4:.5 | F4:1 E4:1 E4:1 E4:.5 E4:.5 | G4:1 G4:1 F4:1 D4:1 | C4:4' },
+  { id: 'wish', cat: '🎄 Новый год', em: '🎅', title: 'We Wish You a Merry Christmas', sub: 'Весёлого Рождества', level: 'посложнее', beat: 400,
+    seq: 'G4:1 | C5:1 C5:.5 D5:.5 C5:.5 B4:.5 | A4:1 A4:1 A4:1 | D5:1 D5:.5 E5:.5 D5:.5 C5:.5 | B4:1 G4:1 G4:1 | E5:1 E5:.5 F5:.5 E5:.5 D5:.5 | C5:1 A4:1 G4:.5 G4:.5 | A4:1 D5:1 B4:1 | C5:3' },
+  { id: 'lamb', cat: '⭐ Для малышей', em: '🐑', title: 'Барашек Мэри', sub: 'Mary Had a Little Lamb', level: 'легко', beat: 420,
+    seq: 'E4:1 D4:1 C4:1 D4:1 E4:1 E4:1 E4:2 | D4:1 D4:1 D4:2 E4:1 G4:1 G4:2 | E4:1 D4:1 C4:1 D4:1 E4:1 E4:1 E4:1 E4:1 | D4:1 D4:1 E4:1 D4:1 C4:4' },
+  { id: 'star', cat: '⭐ Для малышей', em: '⭐', title: 'Маленькая звёздочка', sub: 'Twinkle, Twinkle', level: 'легко', beat: 420,
+    seq: 'C4:1 C4:1 G4:1 G4:1 A4:1 A4:1 G4:2 | F4:1 F4:1 E4:1 E4:1 D4:1 D4:1 C4:2 | G4:1 G4:1 F4:1 F4:1 E4:1 E4:1 D4:2 | G4:1 G4:1 F4:1 F4:1 E4:1 E4:1 D4:2 | C4:1 C4:1 G4:1 G4:1 A4:1 A4:1 G4:2 | F4:1 F4:1 E4:1 E4:1 D4:1 D4:1 C4:2' },
+  { id: 'joy', cat: '🎼 Классика', em: '🎻', title: 'Ода к радости', sub: 'Л. ван Бетховен', level: 'средне', beat: 400,
+    seq: 'E4:1 E4:1 F4:1 G4:1 G4:1 F4:1 E4:1 D4:1 C4:1 C4:1 D4:1 E4:1 E4:1.5 D4:.5 D4:2 | E4:1 E4:1 F4:1 G4:1 G4:1 F4:1 E4:1 D4:1 C4:1 C4:1 D4:1 E4:1 D4:1.5 C4:.5 C4:2' },
+];
+function midiOf(n) { return 12 * (parseInt(n.slice(-1), 10) + 1) + { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[n[0]]; }
+function freqOf(n) { return 440 * Math.pow(2, (midiOf(n) - 69) / 12); }
+for (const s of SONGS) {
+  s.notes = s.seq.split(/\s+/).filter(t => t && t !== '|').map(t => { const [n, d] = t.split(':'); return { n, d: parseFloat(d) }; });
+  s.keys = [...new Set(s.notes.map(x => x.n))].sort((a, b) => midiOf(a) - midiOf(b));
+  s.labels = {};
+  for (const k of s.keys) {
+    const same = s.keys.filter(x => x[0] === k[0]);
+    s.labels[k] = SOLF[k[0]] + (same.length > 1 && midiOf(k) > midiOf(same[0]) ? '↑' : '');
+  }
+}
+
+let mode = 'free', song = null, demo = null, laneY = 120, noCam = false;
+const sStrings = [];
+const songbarEl = document.getElementById('songbar');
+const libEl = document.getElementById('lib');
+const winEl = document.getElementById('win');
+
+function activeStrings() { return mode === 'song' ? sStrings : strings; }
+function targetKey() {
+  if (!song || song.done) return null;
+  const n = song.notes[demo ? demo.i : song.idx];
+  return n ? n.n : null;
+}
+
+function layoutSong() {
+  if (!song) return;
+  const bar = songbarEl.getBoundingClientRect();
+  laneY = bar.bottom + (H < 520 ? 30 : 40);
+  const top = laneY + (H < 520 ? 44 : 56), bottom = H - (H < 520 ? 62 : 100);
+  const K = song.keys.length;
+  const span = Math.min(W * 0.84, (K - 1) * 120);
+  const x0 = (W - span) / 2;
+  sStrings.length = 0;
+  song.keys.forEach((key, i) => {
+    const x = K > 1 ? x0 + span * i / (K - 1) : W / 2;
+    sStrings.push({ a: { x, y: top }, b: { x, y: bottom }, len: bottom - top, key, freq: freqOf(key),
+                    name: key, label: song.labels[key], col: NOTE_COL[key[0]], amp: 0, t0: 0, cd: {} });
+  });
+}
+addEventListener('resize', () => { if (song) requestAnimationFrame(layoutSong); });
+
+function buildLib() {
+  const list = document.getElementById('libList');
+  list.textContent = '';
+  const cats = [...new Set(SONGS.map(s => s.cat))];
+  for (const c of cats) {
+    const h = document.createElement('div'); h.className = 'cat'; h.textContent = c; list.appendChild(h);
+    const box = document.createElement('div'); box.className = 'cards'; list.appendChild(box);
+    for (const s of SONGS.filter(x => x.cat === c)) {
+      const b = document.createElement('button'); b.className = 'song';
+      const em = document.createElement('span'); em.className = 'em'; em.textContent = s.em;
+      const t = document.createElement('span');
+      const bt = document.createElement('b'); bt.textContent = s.title;
+      const sm = document.createElement('small'); sm.textContent = `${s.sub} · ${s.keys.length} нот · ${s.level}`;
+      const dots = document.createElement('span'); dots.className = 'dots';
+      for (const k of s.keys) { const i = document.createElement('i'); i.style.background = NOTE_COL[k[0]]; dots.appendChild(i); }
+      t.append(bt, sm, dots); b.append(em, t);
+      b.onclick = () => startSong(s.id);
+      box.appendChild(b);
+    }
+  }
+}
+function openLib() {
+  demo = null;
+  document.getElementById('libFree').style.display = noCam ? 'none' : '';
+  document.getElementById('libClose').style.display = (noCam && mode !== 'song') ? 'none' : '';
+  libEl.style.display = 'flex';
+}
+function closeLib() { if (noCam && mode !== 'song') return; libEl.style.display = 'none'; }
+
+function startSong(id) {
+  const base = SONGS.find(s => s.id === id);
+  song = { ...base, idx: 0, done: false };
+  mode = 'song'; demo = null; creating = null; droneStop();
+  libEl.style.display = 'none'; winEl.style.display = 'none';
+  btnsEl.style.display = 'none'; hudEl.style.display = 'none';
+  songbarEl.style.display = 'block';
+  updateSongbar();
+  layoutSong();
+}
+function restartSong() { if (!song) return; demo = null; song.idx = 0; song.done = false; winEl.style.display = 'none'; updateSongbar(); }
+function exitSong() {
+  mode = 'free'; song = null; demo = null; sStrings.length = 0;
+  songbarEl.style.display = 'none'; winEl.style.display = 'none';
+  if (noCam) { openLib(); return; }
+  btnsEl.style.display = 'flex';
+}
+function updateSongbar() {
+  if (!song) return;
+  const i = demo ? demo.i : song.idx, n = song.notes.length;
+  const t = document.getElementById('sbTitle');
+  t.textContent = `${song.em} ${song.title}`;
+  const c = document.createElement('span'); c.id = 'sbCount'; c.textContent = `${Math.min(i, n)} / ${n}`;
+  t.appendChild(c);
+  songbarEl.querySelector('#sbProg i').style.width = (100 * Math.min(i, n) / n) + '%';
+  const d = document.getElementById('sbDemo');
+  d.textContent = demo ? '■ Стоп' : '▶ Послушать';
+  d.classList.toggle('on', !!demo);
+  document.getElementById('sbHint').textContent = demo
+    ? 'Слушай и смотри, какие струны загораются'
+    : 'Проведи пальцем по светящейся струне — в воздухе или по экрану';
+}
+
+function toggleDemo() {
+  if (!song) return;
+  if (demo) { demo = null; updateSongbar(); return; }
+  song.idx = 0; song.done = false; winEl.style.display = 'none';
+  demo = { i: 0, next: performance.now() + 400 };
+  updateSongbar();
+}
+function tickDemo(now) {
+  if (!demo || !song || now < demo.next) return;
+  const n = song.notes[demo.i];
+  const s = sStrings.find(x => x.key === n.n);
+  if (s) { pluckString(s, 0.5, 0.7); burst({ x: s.a.x, y: s.a.y + (s.b.y - s.a.y) * 0.5 }, 10); }
+  demo.next = now + n.d * song.beat;
+  demo.i++;
+  if (demo.i >= song.notes.length) demo = null;
+  updateSongbar();
+}
+
+function finishSong() {
+  song.done = true;
+  sparkSound();
+  sStrings.forEach((s, i) => setTimeout(() => {
+    if (mode !== 'song' || !sStrings.includes(s)) return;
+    pluckString(s, 0.5, 0.6);
+    burst({ x: s.a.x, y: s.a.y + (s.b.y - s.a.y) * (0.2 + Math.random() * 0.6) }, 22);
+  }, 250 + i * 90));
+  document.getElementById('winText').textContent = `Ты сыграл(а) «${song.title}»!`;
+  setTimeout(() => { if (song && song.done) winEl.style.display = 'block'; }, 500);
+}
+
+function pointOn(s, u) { return { x: s.a.x + (s.b.x - s.a.x) * u, y: s.a.y + (s.b.y - s.a.y) * u }; }
+function hitString(s, u, vel, k, now) {
+  if (now - (s.cd[k] || 0) < (mode === 'song' ? 220 : 180)) return;
+  s.cd[k] = now;
+  if (mode !== 'song') {
+    pluckString(s, u, vel);
+    burst(pointOn(s, u), 8 + Math.floor(vel * 14));
+    return;
+  }
+  const tgt = targetKey();
+  if (!demo && tgt && s.key === tgt) {
+    pluckString(s, u, Math.max(0.6, vel));
+    burst(pointOn(s, u), 18);
+    song.idx++;
+    if (song.idx >= song.notes.length) finishSong();
+    updateSongbar();
+  } else {
+    s.amp = 3; s.t0 = now; // чужая струна только чуть дрожит, без звука
+  }
+}
+
+function projU(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1;
+  return Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2));
+}
+function distToSeg(p, a, b) { const q = pointOn({ a, b }, projU(p, a, b)); return Math.hypot(p.x - q.x, p.y - q.y); }
+
+// Игра пальцем по экрану (телефон) или мышкой
+const ptrs = new Map();
+cv.addEventListener('pointerdown', e => {
+  const p = { x: e.clientX, y: e.clientY };
+  ptrs.set(e.pointerId, p);
+  let best = null, bd = 26;
+  for (const s of activeStrings()) { const d = distToSeg(p, s.a, s.b); if (d < bd) { bd = d; best = s; } }
+  if (best) hitString(best, projU(p, best.a, best.b), 0.75, 'p' + e.pointerId, performance.now());
+});
+cv.addEventListener('pointermove', e => {
+  const p0 = ptrs.get(e.pointerId);
+  if (!p0) return;
+  const p1 = { x: e.clientX, y: e.clientY }, now = performance.now();
+  const sp = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+  for (const s of activeStrings()) {
+    const u = segInter(p0, p1, s.a, s.b);
+    if (u !== null) hitString(s, u, 0.4 + Math.min(1, sp / 40) * 0.6, 'p' + e.pointerId, now);
+  }
+  ptrs.set(e.pointerId, p1);
+});
+for (const t of ['pointerup', 'pointercancel', 'pointerleave']) cv.addEventListener(t, e => ptrs.delete(e.pointerId));
+
+function drawSongString(s, now, target) {
+  const dx = s.b.x - s.a.x, dy = s.b.y - s.a.y;
+  const L = Math.hypot(dx, dy) || 1;
+  const nx = -dy / L, ny = dx / L;
+  const t = (now - s.t0) / 1000;
+  const A = s.amp * Math.exp(-t * 2.2);
+  const ph = Math.sin(t * 2 * Math.PI * Math.min(14, s.freq / 25));
+  const disp = u => A * ph * Math.sin(Math.PI * u);
+  const N = Math.max(12, Math.floor(L / 10));
+  const pulse = 0.5 + 0.5 * Math.sin(now / 170);
+  const hit = Math.exp(-t * 1.6);
+  const alpha = target ? 1 : Math.min(1, 0.4 + 0.6 * hit);
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = s.col; ctx.shadowColor = s.col;
+  ctx.globalAlpha = alpha * (target ? 0.5 : 0.28);
+  ctx.lineWidth = target ? 14 + 10 * pulse : 8;
+  ctx.shadowBlur = target ? 34 : 10;
+  stringPath(s, disp, dx, dy, nx, ny, N); ctx.stroke();
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = target ? 3.4 : 2.2;
+  ctx.strokeStyle = target ? '#ffffff' : s.col;
+  ctx.shadowBlur = target ? 18 : 6;
+  stringPath(s, disp, dx, dy, nx, ny, N); ctx.stroke();
+  ctx.fillStyle = s.col;
+  for (const e of [s.a, s.b]) { ctx.beginPath(); ctx.arc(e.x, e.y, 4, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+
+  // кружок с названием ноты
+  const r = target ? 23 : 18, by = s.b.y + 32;
+  ctx.save();
+  ctx.globalAlpha = target ? 1 : 0.8;
+  ctx.beginPath(); ctx.arc(s.b.x, by, r, 0, Math.PI * 2);
+  ctx.fillStyle = s.col; ctx.shadowColor = s.col; ctx.shadowBlur = target ? 22 : 0; ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#16102a';
+  ctx.font = `800 ${target ? 13.5 : 11.5}px system-ui, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(s.label, s.b.x, by + 0.5);
+  if (target && !demo) { // стрелка «сюда»
+    const ay = s.a.y - 16 - 9 * pulse;
+    ctx.globalAlpha = 1; ctx.fillStyle = '#ffffff'; ctx.shadowColor = s.col; ctx.shadowBlur = 16;
+    ctx.beginPath(); ctx.moveTo(s.a.x - 12, ay - 14); ctx.lineTo(s.a.x + 12, ay - 14); ctx.lineTo(s.a.x, ay); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawLane(now) {
+  if (!song || song.done) return;
+  const i0 = demo ? demo.i : song.idx;
+  const max = W < 520 ? 6 : 9;
+  const items = song.notes.slice(i0, i0 + max);
+  if (!items.length) return;
+  const gap = W < 520 ? 48 : 58;
+  let x = W / 2 - ((items.length - 1) * gap) / 2;
+  const pulse = 0.5 + 0.5 * Math.sin(now / 170);
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  items.forEach((n, j) => {
+    const first = j === 0, r = first ? 22 + 2 * pulse : 16;
+    ctx.globalAlpha = first ? 1 : Math.max(0.45, 0.9 - j * 0.09);
+    ctx.beginPath(); ctx.arc(x, laneY, r, 0, Math.PI * 2);
+    ctx.fillStyle = NOTE_COL[n.n[0]];
+    ctx.shadowColor = NOTE_COL[n.n[0]]; ctx.shadowBlur = first ? 22 : 0;
+    ctx.fill();
+    if (first) { ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke(); }
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = first ? 1 : Math.max(0.55, 1 - j * 0.08);
+    ctx.fillStyle = '#16102a';
+    ctx.font = `800 ${first ? 12.5 : 10.5}px system-ui, sans-serif`;
+    ctx.fillText(song.labels[n.n], x, laneY + 0.5);
+    x += gap;
+  });
+  ctx.restore();
+}
+
+document.getElementById('songsBtn').onclick = openLib;
+document.getElementById('libClose').onclick = closeLib;
+document.getElementById('libFree').onclick = () => { libEl.style.display = 'none'; if (mode === 'song') exitSong(); };
+libEl.addEventListener('click', e => { if (e.target === libEl) closeLib(); });
+document.getElementById('sbDemo').onclick = toggleDemo;
+document.getElementById('sbRestart').onclick = restartSong;
+document.getElementById('sbLib').onclick = openLib;
+document.getElementById('sbExit').onclick = exitSong;
+document.getElementById('winAgain').onclick = restartSong;
+document.getElementById('winLib').onclick = () => { winEl.style.display = 'none'; openLib(); };
+addEventListener('keydown', e => { if (e.code === 'Escape' && libEl.style.display === 'flex') closeLib(); });
+buildLib();
+
 /* ---------------- Цикл ---------------- */
 let landmarker = null, lastVideoTime = -1, lastFrame = performance.now();
 let detFrames = 0, detT0 = performance.now();
@@ -541,7 +910,7 @@ function loop() {
   const now = performance.now();
   const dt = Math.min(50, now - lastFrame); lastFrame = now;
 
-  if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+  if (landmarker && video.readyState >= 2 && video.currentTime !== lastVideoTime) {
     lastVideoTime = video.currentTime;
     vw = video.videoWidth || vw; vh = video.videoHeight || vh;
     const R = videoRect();
@@ -556,31 +925,44 @@ function loop() {
 
   // кадр с камеры (зеркально)
   ctx.clearRect(0, 0, W, H);
-  const R = videoRect();
-  ctx.save();
-  ctx.translate(R.ox + R.dw, R.oy); ctx.scale(-1, 1);
-  ctx.drawImage(video, 0, 0, R.dw, R.dh);
-  ctx.restore();
-  ctx.fillStyle = 'rgba(8,4,22,0.3)';
-  ctx.fillRect(0, 0, W, H);
+  if (!noCam) {
+    const R = videoRect();
+    ctx.save();
+    ctx.translate(R.ox + R.dw, R.oy); ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, R.dw, R.dh);
+    ctx.restore();
+    ctx.fillStyle = mode === 'song' ? 'rgba(8,4,22,0.45)' : 'rgba(8,4,22,0.3)';
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    const g = ctx.createRadialGradient(W / 2, H * 0.45, 10, W / 2, H * 0.45, Math.max(W, H) * 0.75);
+    g.addColorStop(0, '#24164a'); g.addColorStop(1, '#05030c');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
 
-  for (const s of strings) drawString(s, now);
-  if (creating && creating.a && creating.b && creating.len > 20) {
-    drawString({ a: creating.a, b: creating.b, freq: creating.note.freq, name: creating.note.name, t0: now }, now, true);
+  if (mode === 'song') {
+    tickDemo(now);
+    const tk = targetKey();
+    for (const s of sStrings) drawSongString(s, now, s.key === tk);
+    drawLane(now);
+  } else {
+    for (const s of strings) drawString(s, now);
+    if (creating && creating.a && creating.b && creating.len > 20) {
+      drawString({ a: creating.a, b: creating.b, freq: creating.note.freq, name: creating.note.name, t0: now }, now, true);
+    }
   }
   drawParticles(dt);
   drawHands(now);
 
   if (now - detT0 > 1000) {
-    infoEl.textContent = `${detFrames} кадров/с · струн: ${strings.length}`;
+    infoEl.textContent = noCam ? '' : `${detFrames} кадров/с · струн: ${activeStrings().length}`;
     detFrames = 0; detT0 = now;
   }
   requestAnimationFrame(loop);
 }
 
 /* ---------------- Управление ---------------- */
-function undo() { strings.pop(); }
-function clearAll() { strings.length = 0; runners.length = 0; }
+function undo() { if (mode !== 'song') strings.pop(); }
+function clearAll() { if (mode === 'song') return; strings.length = 0; runners.length = 0; }
 function toggleHelp() { hudEl.style.display = hudEl.style.display === 'none' ? 'block' : 'none'; }
 document.getElementById('undo').onclick = undo;
 document.getElementById('clear').onclick = clearAll;
@@ -622,6 +1004,17 @@ function errorText(e) {
   if (n === 'Insecure') return 'Камера работает только по ссылке https://… Открой страницу по защищённой ссылке, а не как файл.';
   return 'Не удалось запустить: ' + (e && e.message ? e.message : e) + '. Проверьте интернет и нажмите ещё раз.';
 }
+
+document.getElementById('touchgo').onclick = async () => {
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  if (!ac) initAudio();
+  try { await ac.resume(); } catch (e) {}
+  noCam = true;
+  startEl.style.display = 'none';
+  keepAwake();
+  requestAnimationFrame(loop);
+  openLib();
+};
 
 document.getElementById('go').onclick = async () => {
   const btn = document.getElementById('go');
