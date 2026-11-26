@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Воздушные струны</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#fff}
+  #cam{position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none}
+  #cv{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;display:block;touch-action:none}
+  #start{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+    background:radial-gradient(ellipse at center,#1d1236 0%,#000 72%);z-index:10;text-align:center;padding:24px}
+  #start h1{font-size:46px;margin:0;font-weight:700;letter-spacing:.5px;text-shadow:0 0 22px #c9b6ff}
+  #start p{margin:0;max-width:560px;line-height:1.55;color:#d4cdea;font-size:16px}
+  #go{font-size:18px;padding:14px 30px;border-radius:999px;border:0;background:#fff;color:#111;font-weight:600;cursor:pointer;
+    box-shadow:0 0 34px rgba(200,180,255,.65)}
+  #go:disabled{opacity:.6;cursor:wait}
+  #status{color:#d4cdea;min-height:1.4em;max-width:560px;line-height:1.5}
+  #hud{position:fixed;left:16px;bottom:16px;z-index:5;font-size:14px;line-height:1.65;background:rgba(0,0,0,.5);
+    padding:12px 16px;border-radius:14px;max-width:470px;backdrop-filter:blur(6px);display:none}
+  #hud b{font-size:15px}
+  .k{display:inline-block;border:1px solid rgba(255,255,255,.45);border-radius:5px;padding:0 6px;margin:0 2px;font-size:12px}
+  #btns{position:fixed;right:max(16px,env(safe-area-inset-right));top:max(16px,env(safe-area-inset-top));z-index:5;display:none;gap:8px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 32px)}
+  #btns button{background:rgba(0,0,0,.5);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:8px 14px;font-size:13px;cursor:pointer;min-height:40px;-webkit-tap-highlight-color:transparent}
+  #btns button:hover{background:rgba(255,255,255,.15)}
+  #info{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:5;font-size:12px;color:rgba(255,255,255,.55)}
+  .phone{display:none}
+  @media (pointer:coarse){.desk{display:none}.phone{display:inline}}
+  @media (max-width:640px){
+    #start h1{font-size:34px}
+    #start p{font-size:15px}
+    #hud{left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));max-width:none;font-size:12.5px;line-height:1.5;padding:10px 12px}
+    #hud b{font-size:13.5px}
+    #btns button{font-size:14px;padding:8px 13px;min-height:44px}
+    #info{display:none}
+  }
+</style>
+</head>
+<body>
+<video id="cam" playsinline muted></video>
+<canvas id="cv"></canvas>
+
+<div id="start">
+  <h1>Воздушные струны</h1>
+  <p>Натягивай светящиеся струны пальцами и играй на них прямо в воздухе. Нужны камера и включённый звук.</p>
+  <p class="phone">📱 Поставь телефон вертикально на подставку или прислони к чему-нибудь — обе руки должны быть в кадре. На iPhone выключи беззвучный режим.</p>
+  <button id="go">Включить камеру и звук</button>
+  <div id="status"></div>
+</div>
+
+<div id="hud">
+  <b>Как играть</b><br>
+  🤏 Сведи большой и указательный на <b>обеих</b> руках и разведи руки — натянешь струну<br>
+  🤏 Или щипок одной рукой и потяни — струна от точки до точки<br>
+  ☝️ Проведи указательным пальцем сквозь струну — она зазвучит<br>
+  🫰 Щёлкни пальцами (большой + средний) — искры побегут по всем струнам<br>
+  Длинная струна звучит ниже, короткая — выше.<br>
+  <span class="desk"><span class="k">Z</span> отменить &nbsp;·&nbsp; <span class="k">C</span> очистить &nbsp;·&nbsp; <span class="k">H</span> скрыть подсказку</span><span class="phone">Кнопки сверху: отменить, очистить, скрыть подсказку</span>
+</div>
+<div id="btns">
+  <button id="undo">Отменить</button>
+  <button id="clear">Очистить</button>
+  <button id="help">Подсказка</button>
+  <button id="full" style="display:none">⛶</button>
+</div>
+<div id="info"></div>
+
+<script type="module">
+import { FilesetResolver, HandLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+
+const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
+const MODEL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+
+const video = document.getElementById('cam');
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const statusEl = document.getElementById('status');
+const startEl = document.getElementById('start');
+const hudEl = document.getElementById('hud');
+const btnsEl = document.getElementById('btns');
+const infoEl = document.getElementById('info');
+
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+addEventListener('resize', resize);
+resize();
+
+/* ---------------- Звук ---------------- */
+let ac = null, master = null, revSend = null;
+
+function initAudio() {
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  const comp = ac.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.ratio.value = 4;
+  master = ac.createGain(); master.gain.value = 0.85;
+  master.connect(comp); comp.connect(ac.destination);
+  const conv = ac.createConvolver(); conv.buffer = makeImpulse(3.0, 2.4);
+  revSend = ac.createGain(); revSend.gain.value = 0.5;
+  revSend.connect(conv); conv.connect(master);
+}
+
+function makeImpulse(sec, decay) {
+  const len = Math.floor(ac.sampleRate * sec);
+  const buf = ac.createBuffer(2, len, ac.sampleRate);
+  for (let c = 0; c < 2; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+  }
+  return buf;
+}
+
+function connectOut(node, pan) {
+  if (ac.createStereoPanner) {
+    const p = ac.createStereoPanner();
+    p.pan.value = Math.max(-1, Math.min(1, pan));
+    node.connect(p); p.connect(master); p.connect(revSend);
+  } else {
+    node.connect(master); node.connect(revSend);
+  }
+}
+
+// Щипковый звук струны
+function pluckSound(freq, vel = 1, pan = 0) {
+  if (!ac) return;
+  const t = ac.currentTime;
+  const env = ac.createGain();
+  env.gain.setValueAtTime(0.0001, t);
+  env.gain.exponentialRampToValueAtTime(0.05 + 0.25 * vel, t + 0.006);
+  env.gain.exponentialRampToValueAtTime(0.0008, t + 2.6);
+  const lp = ac.createBiquadFilter();
+  lp.type = 'lowpass'; lp.Q.value = 1.4;
+  lp.frequency.setValueAtTime(Math.min(freq * 10, 16000), t);
+  lp.frequency.exponentialRampToValueAtTime(freq * 1.6, t + 1.4);
+  const partials = [[1, 'sawtooth', 0.32], [1, 'sine', 0.6], [2, 'triangle', 0.2], [3.01, 'sine', 0.07]];
+  for (const [m, type, g] of partials) {
+    const o = ac.createOscillator();
+    o.type = type; o.frequency.value = freq * m; o.detune.value = (Math.random() - 0.5) * 6;
+    const og = ac.createGain(); og.gain.value = g;
+    o.connect(og); og.connect(lp);
+    o.start(t); o.stop(t + 2.8);
+  }
+  lp.connect(env);
+  connectOut(env, pan);
+}
+
+// Треск искр
+function sparkSound() {
+  if (!ac) return;
+  const t = ac.currentTime;
+  const len = Math.floor(0.3 * ac.sampleRate);
+  const b = ac.createBuffer(1, len, ac.sampleRate);
+  const d = b.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 5) * (Math.random() < 0.3 ? 1 : 0.3);
+  const src = ac.createBufferSource(); src.buffer = b;
+  const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2500;
+  const g = ac.createGain(); g.gain.value = 0.4;
+  src.connect(hp); hp.connect(g);
+  connectOut(g, 0);
+  src.start(t);
+}
+
+// Тянущийся звук, пока натягиваешь струну
+let drone = null;
+function droneStart(freq) {
+  if (!ac || drone) return;
+  const t = ac.currentTime;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.08, t + 0.15);
+  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = freq * 4;
+  const o1 = ac.createOscillator(); o1.type = 'triangle'; o1.frequency.value = freq;
+  const o2 = ac.createOscillator(); o2.type = 'sine'; o2.frequency.value = freq * 2;
+  const g2 = ac.createGain(); g2.gain.value = 0.3;
+  const lfo = ac.createOscillator(); lfo.frequency.value = 5.5;
+  const lg = ac.createGain(); lg.gain.value = freq * 0.006;
+  lfo.connect(lg); lg.connect(o1.frequency);
+  o1.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g);
+  connectOut(g, 0);
+  o1.start(); o2.start(); lfo.start();
+  drone = { g, lp, o1, o2, lfo, lg };
+}
+function droneSet(freq) {
+  if (!drone) return;
+  const t = ac.currentTime;
+  drone.o1.frequency.setTargetAtTime(freq, t, 0.04);
+  drone.o2.frequency.setTargetAtTime(freq * 2, t, 0.04);
+  drone.lp.frequency.setTargetAtTime(freq * 4, t, 0.05);
+  drone.lg.gain.setTargetAtTime(freq * 0.006, t, 0.05);
+}
+function droneStop() {
+  if (!drone) return;
+  const t = ac.currentTime, d = drone; drone = null;
+  d.g.gain.cancelScheduledValues(t);
+  d.g.gain.setValueAtTime(Math.max(d.g.gain.value, 0.0001), t);
+  d.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+  [d.o1, d.o2, d.lfo].forEach(o => o.stop(t + 0.3));
+}
+
+/* ---------------- Ноты ---------------- */
+const SEMIS = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22, 24, 27, 29, 31, 34, 36]; // ля-минорная пентатоника от A2
+const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+function noteForLength(L) {
+  const diag = Math.hypot(W, H);
+  let r = (L / diag - 0.06) / 0.7;
+  r = Math.max(0, Math.min(1, r));
+  const idx = Math.round((1 - r) * (SEMIS.length - 1));
+  const midi = 45 + SEMIS[idx];
+  return { freq: 440 * Math.pow(2, (midi - 69) / 12), name: NAMES[midi % 12] + (Math.floor(midi / 12) - 1) };
+}
+
+/* ---------------- Руки ---------------- */
+const CONN = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],
+              [9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+let vw = 1280, vh = 720;
+
+function videoRect() {
+  const s = Math.max(W / vw, H / vh);
+  const dw = vw * s, dh = vh * s;
+  return { s, dw, dh, ox: (W - dw) / 2, oy: (H - dh) / 2 };
+}
+function toScreen(lm, R) { // зеркально, как в зеркале
+  return { x: R.ox + (1 - lm.x) * R.dw, y: R.oy + lm.y * R.dh };
+}
+
+const hands = {};
+function handState(k) {
+  if (!hands[k]) hands[k] = { pts: null, seen: 0, pinch: false, pinchPt: null, tip: null, prevTip: null,
+                              midContact: false, midContactT: 0, snapT: 0, size: 100 };
+  return hands[k];
+}
+
+function assign(det) {
+  const res = {};
+  if (det.length >= 2) {
+    const s = det.slice(0, 2).sort((a, b) => a[0].x - b[0].x);
+    res.A = s[0]; res.B = s[1];
+  } else if (det.length === 1) {
+    const p = det[0][0];
+    let best = null, bd = 1e9;
+    for (const k of ['A', 'B']) {
+      const h = hands[k];
+      if (h && h.pts && performance.now() - h.seen < 600) {
+        const d = Math.hypot(h.pts[0].x - p.x, h.pts[0].y - p.y);
+        if (d < bd) { bd = d; best = k; }
+      }
+    }
+    if (!best) best = p.x < W / 2 ? 'A' : 'B';
+    res[best] = det[0];
+  }
+  return res;
+}
+
+function updateHands(res, now) {
+  for (const k of ['A', 'B']) {
+    const h = handState(k);
+    const raw = res[k];
+    if (!raw) {
+      if (h.pts && now - h.seen > 250) {
+        const was = h.pinch; h.pinch = false;
+        if (was) endPinch(k);
+        h.pts = null; h.tip = null; h.prevTip = null; h.midContact = false;
+      }
+      continue;
+    }
+    if (!h.pts || now - h.seen > 250) {
+      h.pts = raw.map(p => ({ x: p.x, y: p.y }));
+      h.tip = null;
+    } else {
+      for (let i = 0; i < 21; i++) {
+        h.pts[i].x += (raw[i].x - h.pts[i].x) * 0.6;
+        h.pts[i].y += (raw[i].y - h.pts[i].y) * 0.6;
+      }
+    }
+    h.seen = now;
+    const P = h.pts;
+    h.size = Math.hypot(P[0].x - P[9].x, P[0].y - P[9].y) || 1;
+    const dIdx = Math.hypot(P[4].x - P[8].x, P[4].y - P[8].y) / h.size;
+    const dMid = Math.hypot(P[4].x - P[12].x, P[4].y - P[12].y) / h.size;
+    h.pinchPt = { x: (P[4].x + P[8].x) / 2, y: (P[4].y + P[8].y) / 2 };
+
+    const was = h.pinch;
+    if (!h.pinch && dIdx < 0.28) h.pinch = true;
+    else if (h.pinch && dIdx > 0.45) h.pinch = false;
+    if (h.pinch && !was) startPinch(k);
+    if (!h.pinch && was) endPinch(k);
+
+    // Щелчок: большой касается среднего и быстро отпускает
+    if (!h.midContact && dMid < 0.3 && dIdx > 0.45) { h.midContact = true; h.midContactT = now; }
+    else if (h.midContact && dMid > 0.6) {
+      h.midContact = false;
+      if (now - h.midContactT < 450 && now - h.snapT > 500) {
+        h.snapT = now;
+        snap({ x: (P[4].x + P[12].x) / 2, y: (P[4].y + P[12].y) / 2 });
+      }
+    }
+    if (h.midContact && now - h.midContactT > 1500) h.midContact = false;
+
+    h.prevTip = h.tip;
+    h.tip = { x: P[8].x, y: P[8].y };
+  }
+}
+
+/* ---------------- Струны ---------------- */
+const strings = [];
+let creating = null;
+
+function startPinch(k) {
+  const other = hands[k === 'A' ? 'B' : 'A'];
+  if (other && other.pinch && other.pts) creating = { mode: 'two' };
+  else if (!creating) creating = { mode: 'one', key: k, a: { ...hands[k].pinchPt } };
+}
+function endPinch(k) {
+  if (!creating) return;
+  if (creating.mode === 'two' || creating.key === k) finalize();
+}
+function updateCreating() {
+  if (!creating) return;
+  if (creating.mode === 'two') {
+    const A = hands.A, B = hands.B;
+    if (!(A && B && A.pinch && B.pinch && A.pinchPt && B.pinchPt)) { finalize(); return; }
+    creating.a = A.pinchPt; creating.b = B.pinchPt;
+  } else {
+    const h = hands[creating.key];
+    if (!h || !h.pinch) { finalize(); return; }
+    creating.b = h.pinchPt;
+  }
+  const L = Math.hypot(creating.b.x - creating.a.x, creating.b.y - creating.a.y);
+  const n = noteForLength(L);
+  creating.len = L; creating.note = n;
+  if (L > 50) { if (!drone) droneStart(n.freq); else droneSet(n.freq); }
+}
+function finalize() {
+  const c = creating; creating = null;
+  droneStop();
+  if (c && c.a && c.b && c.len > 70) addString(c.a, c.b);
+}
+function addString(a, b) {
+  const len = Math.hypot(b.x - a.x, b.y - a.y);
+  const n = noteForLength(len);
+  const s = { a: { ...a }, b: { ...b }, len, freq: n.freq, name: n.name, amp: 0, t0: 0, cd: {} };
+  strings.push(s);
+  if (strings.length > 24) strings.shift();
+  pluckString(s, 0.5, 0.8);
+  burst({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, 18);
+}
+function pluckString(s, pos, vel) {
+  s.amp = 5 + vel * 14;
+  s.t0 = performance.now();
+  const mx = (s.a.x + s.b.x) / 2;
+  pluckSound(s.freq, vel, (mx / W) * 2 - 1);
+}
+
+function segInter(p, p2, a, b) {
+  const r = { x: p2.x - p.x, y: p2.y - p.y }, q = { x: b.x - a.x, y: b.y - a.y };
+  const den = r.x * q.y - r.y * q.x;
+  if (Math.abs(den) < 1e-6) return null;
+  const t = ((a.x - p.x) * q.y - (a.y - p.y) * q.x) / den;
+  const u = ((a.x - p.x) * r.y - (a.y - p.y) * r.x) / den;
+  return (t >= 0 && t <= 1 && u >= 0.02 && u <= 0.98) ? u : null;
+}
+
+function checkPlucks(now) {
+  for (const k of ['A', 'B']) {
+    const h = hands[k];
+    if (!h || !h.pts || !h.prevTip || !h.tip || h.pinch) continue;
+    if (creating && (creating.mode === 'two' || creating.key === k)) continue;
+    const p0 = h.prevTip, p1 = h.tip;
+    const sp = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+    if (sp < 3) continue;
+    for (const s of strings) {
+      const u = segInter(p0, p1, s.a, s.b);
+      if (u === null) continue;
+      if (now - (s.cd[k] || 0) < 180) continue;
+      s.cd[k] = now;
+      const vel = Math.min(1, sp / 60);
+      pluckString(s, u, 0.35 + vel * 0.65);
+      burst({ x: s.a.x + (s.b.x - s.a.x) * u, y: s.a.y + (s.b.y - s.a.y) * u }, 8 + Math.floor(vel * 16));
+    }
+  }
+}
+
+/* ---------------- Искры ---------------- */
+const parts = [];
+const runners = [];
+function burst(P, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = 0.8 + Math.random() * 4.5;
+    parts.push({ x: P.x, y: P.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.6, life: 1,
+                 decay: 0.012 + Math.random() * 0.022, size: 0.8 + Math.random() * 2 });
+  }
+}
+function snap(P) {
+  burst(P, 34);
+  sparkSound();
+  strings.forEach((s, i) => {
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    runners.push({ s, u: dir > 0 ? 0 : 1, dir, speed: 0.9 + Math.random() * 0.6, delay: i * 70 });
+    setTimeout(() => { if (strings.includes(s)) pluckString(s, 0.5, 0.6); }, i * 70);
+  });
+}
+
+/* ---------------- Рисование ---------------- */
+function stringPath(s, disp, dx, dy, nx, ny, N) {
+  ctx.beginPath();
+  for (let i = 0; i <= N; i++) {
+    const u = i / N, d = disp(u);
+    const x = s.a.x + dx * u + nx * d, y = s.a.y + dy * u + ny * d;
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+}
+
+function drawString(s, now, preview = false) {
+  const dx = s.b.x - s.a.x, dy = s.b.y - s.a.y;
+  const L = Math.hypot(dx, dy) || 1;
+  const nx = -dy / L, ny = dx / L;
+  const t = (now - s.t0) / 1000;
+  const A = preview ? 1.5 : s.amp * Math.exp(-t * 2.2);
+  const ph = Math.sin(t * 2 * Math.PI * Math.min(14, s.freq / 25));
+  const disp = u => A * ph * Math.sin(Math.PI * u);
+  const N = Math.max(12, Math.floor(L / 10));
+  const glow = preview ? 0.7 : 0.35 + 0.65 * Math.exp(-t * 1.5);
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  // мягкое свечение
+  ctx.strokeStyle = `rgba(190,160,255,${0.28 * glow})`;
+  ctx.lineWidth = 9;
+  stringPath(s, disp, dx, dy, nx, ny, N); ctx.stroke();
+  // яркая сердцевина
+  ctx.shadowColor = 'rgba(235,225,255,0.95)';
+  ctx.shadowBlur = 10 + 10 * glow;
+  ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+  ctx.lineWidth = 1.8;
+  stringPath(s, disp, dx, dy, nx, ny, N); ctx.stroke();
+  // засечки, как на линейке
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 1.1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  const step = 14, nt = Math.floor(L / step);
+  ctx.beginPath();
+  for (let i = 1; i < nt; i++) {
+    const u = (i * step) / L, d = disp(u);
+    const x = s.a.x + dx * u + nx * d, y = s.a.y + dy * u + ny * d;
+    const len = (i % 5 === 0) ? 9 : 4.5;
+    ctx.moveTo(x - nx * len, y - ny * len);
+    ctx.lineTo(x + nx * len * 0.35, y + ny * len * 0.35);
+  }
+  ctx.stroke();
+  // концы
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.shadowColor = '#d9c8ff'; ctx.shadowBlur = 12;
+  for (const e of [s.a, s.b]) { ctx.beginPath(); ctx.arc(e.x, e.y, 3.2, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+
+  if (preview && s.name) {
+    ctx.save();
+    ctx.font = '600 15px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.shadowColor = '#b49cff'; ctx.shadowBlur = 10;
+    ctx.textAlign = 'center';
+    ctx.fillText(s.name, (s.a.x + s.b.x) / 2 + nx * 22, (s.a.y + s.b.y) / 2 + ny * 22);
+    ctx.restore();
+  }
+}
+
+function drawHands(now) {
+  for (const k of ['A', 'B']) {
+    const h = hands[k];
+    if (!h || !h.pts || now - h.seen > 300) continue;
+    const P = h.pts;
+    ctx.save();
+    ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.strokeStyle = '#2bd14b';
+    ctx.beginPath();
+    for (const [i, j] of CONN) { ctx.moveTo(P[i].x, P[i].y); ctx.lineTo(P[j].x, P[j].y); }
+    ctx.stroke();
+    for (let i = 0; i < 21; i++) {
+      ctx.beginPath(); ctx.arc(P[i].x, P[i].y, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#d61f2c'; ctx.fill();
+    }
+    for (const i of [4, 8]) {
+      ctx.beginPath(); ctx.arc(P[i].x, P[i].y, 6.5, 0, Math.PI * 2);
+      ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.stroke();
+    }
+    if (h.pinch && h.pinchPt) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.beginPath(); ctx.arc(h.pinchPt.x, h.pinchPt.y, 11, 0, Math.PI * 2);
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,240,200,0.95)';
+      ctx.shadowColor = '#ffd27a'; ctx.shadowBlur = 16; ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function drawParticles(dt) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const f = dt / 16.7;
+  // бегущие по струнам искры
+  for (let i = runners.length - 1; i >= 0; i--) {
+    const r = runners[i];
+    if (r.delay > 0) { r.delay -= dt; continue; }
+    r.u += r.dir * r.speed * dt / 1000;
+    if (r.u < 0 || r.u > 1 || !strings.includes(r.s)) { runners.splice(i, 1); continue; }
+    const s = r.s;
+    const x = s.a.x + (s.b.x - s.a.x) * r.u, y = s.a.y + (s.b.y - s.a.y) * r.u;
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,245,220,1)'; ctx.shadowColor = '#ffd27a'; ctx.shadowBlur = 18; ctx.fill();
+    for (let j = 0; j < 2; j++) {
+      const a = Math.random() * Math.PI * 2, v = 0.5 + Math.random() * 2;
+      parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.9, decay: 0.03 + Math.random() * 0.03, size: 0.8 + Math.random() * 1.4 });
+    }
+  }
+  ctx.shadowBlur = 0;
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    p.x += p.vx * f; p.y += p.vy * f;
+    p.vy += 0.06 * f; p.vx *= 0.985; p.vy *= 0.985;
+    p.life -= p.decay * f;
+    if (p.life <= 0) { parts.splice(i, 1); continue; }
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.life > 0.6 ? '#ffffff' : '#ffd9a8';
+    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+  }
+  if (parts.length > 1500) parts.splice(0, parts.length - 1500);
+  ctx.restore();
+}
+
+/* ---------------- Цикл ---------------- */
+let landmarker = null, lastVideoTime = -1, lastFrame = performance.now();
+let detFrames = 0, detT0 = performance.now();
+
+function loop() {
+  const now = performance.now();
+  const dt = Math.min(50, now - lastFrame); lastFrame = now;
+
+  if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+    lastVideoTime = video.currentTime;
+    vw = video.videoWidth || vw; vh = video.videoHeight || vh;
+    const R = videoRect();
+    let r = null;
+    try { r = landmarker.detectForVideo(video, now); } catch (e) { console.warn(e); }
+    const det = (r && r.landmarks ? r.landmarks : []).map(l => l.map(p => toScreen(p, R)));
+    updateHands(assign(det), now);
+    checkPlucks(now);
+    detFrames++;
+  }
+  updateCreating();
+
+  // кадр с камеры (зеркально)
+  ctx.clearRect(0, 0, W, H);
+  const R = videoRect();
+  ctx.save();
+  ctx.translate(R.ox + R.dw, R.oy); ctx.scale(-1, 1);
+  ctx.drawImage(video, 0, 0, R.dw, R.dh);
+  ctx.restore();
+  ctx.fillStyle = 'rgba(8,4,22,0.3)';
+  ctx.fillRect(0, 0, W, H);
+
+  for (const s of strings) drawString(s, now);
+  if (creating && creating.a && creating.b && creating.len > 20) {
+    drawString({ a: creating.a, b: creating.b, freq: creating.note.freq, name: creating.note.name, t0: now }, now, true);
+  }
+  drawParticles(dt);
+  drawHands(now);
+
+  if (now - detT0 > 1000) {
+    infoEl.textContent = `${detFrames} кадров/с · струн: ${strings.length}`;
+    detFrames = 0; detT0 = now;
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ---------------- Управление ---------------- */
+function undo() { strings.pop(); }
+function clearAll() { strings.length = 0; runners.length = 0; }
+function toggleHelp() { hudEl.style.display = hudEl.style.display === 'none' ? 'block' : 'none'; }
+document.getElementById('undo').onclick = undo;
+document.getElementById('clear').onclick = clearAll;
+document.getElementById('help').onclick = toggleHelp;
+
+// Экран не гаснет, пока играешь (телефон)
+let wakeLock = null;
+async function keepAwake() {
+  try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && startEl.style.display === 'none') {
+    keepAwake();
+    if (ac && ac.state !== 'running') ac.resume();
+  }
+});
+
+// Полный экран (Android и компьютер; на iPhone кнопки не будет)
+const fullBtn = document.getElementById('full');
+if (document.documentElement.requestFullscreen) {
+  fullBtn.style.display = '';
+  fullBtn.title = 'Во весь экран';
+  fullBtn.onclick = () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  };
+}
+addEventListener('keydown', e => {
+  if (e.code === 'KeyZ' || e.code === 'Backspace') undo();
+  else if (e.code === 'KeyC') clearAll();
+  else if (e.code === 'KeyH') toggleHelp();
+});
+
+function errorText(e) {
+  const n = e && e.name;
+  if (n === 'NotAllowedError') return 'Браузер не дал доступ к камере. Разрешите камеру (значок слева от адреса) и нажмите ещё раз.';
+  if (n === 'NotReadableError' || n === 'TrackStartError') return 'Камера занята другой программой. Закройте TouchDesigner, Zoom, «Камеру» или «Параметры» и нажмите ещё раз.';
+  if (n === 'NotFoundError') return 'Камера не найдена.';
+  if (n === 'Insecure') return 'Камера работает только по ссылке https://… Открой страницу по защищённой ссылке, а не как файл.';
+  return 'Не удалось запустить: ' + (e && e.message ? e.message : e) + '. Проверьте интернет и нажмите ещё раз.';
+}
+
+document.getElementById('go').onclick = async () => {
+  const btn = document.getElementById('go');
+  btn.disabled = true;
+  statusEl.style.color = '#d4cdea';
+  statusEl.textContent = 'Включаю камеру…';
+  try {
+    if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw { name: 'Insecure' };
+    }
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    if (!ac) initAudio();
+    await ac.resume();
+    const portrait = innerHeight > innerWidth;
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: portrait
+        ? { width: { ideal: 720 }, height: { ideal: 1280 }, facingMode: 'user' }
+        : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+      audio: false });
+    video.srcObject = stream;
+    await video.play();
+    vw = video.videoWidth || 1280; vh = video.videoHeight || 720;
+    statusEl.textContent = 'Загружаю распознавание рук… (в первый раз 5–20 секунд)';
+    const fileset = await FilesetResolver.forVisionTasks(WASM);
+    const opts = delegate => ({
+      baseOptions: { modelAssetPath: MODEL, delegate },
+      runningMode: 'VIDEO', numHands: 2,
+      minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5
+    });
+    try { landmarker = await HandLandmarker.createFromOptions(fileset, opts('GPU')); }
+    catch (e) { landmarker = await HandLandmarker.createFromOptions(fileset, opts('CPU')); }
+    startEl.style.display = 'none';
+    hudEl.style.display = 'block';
+    btnsEl.style.display = 'flex';
+    keepAwake();
+    if (matchMedia('(pointer:coarse)').matches) setTimeout(() => { hudEl.style.display = 'none'; }, 15000);
+    pluckSound(220, 0.6, 0);
+    requestAnimationFrame(loop);
+  } catch (e) {
+    console.error(e);
+    btn.disabled = false;
+    statusEl.style.color = '#ffb4b4';
+    statusEl.textContent = errorText(e);
+  }
+};
+</script>
+</body>
+</html>
