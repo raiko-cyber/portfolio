@@ -96,6 +96,7 @@
 
 <div id="hud">
   <b>Как играть</b><br>
+  ✊ Сначала сожми кулак на секунду — игра включится. Ещё раз кулак — пауза<br>
   🤏 Сведи большой и указательный на <b>обеих</b> руках и разведи руки — натянешь струну<br>
   🤏 Или щипок одной рукой и потяни — струна от точки до точки<br>
   ☝️ Проведи указательным пальцем сквозь струну — она зазвучит<br>
@@ -311,9 +312,21 @@ function toScreen(lm, R) { // зеркально, как в зеркале
 }
 
 const hands = {};
+// Замок: пока не сожмёшь кулак, движения рук не играют (чтобы случайные движения не звучали)
+let playOn = false, playT = 0, lastAnyHand = 0;
+function togglePlay(now, at) {
+  playOn = !playOn; playT = now;
+  if (creating) finalize();
+  if (ac) {
+    if (playOn) { pluckSound(523.25, 0.5, 0); setTimeout(() => pluckSound(783.99, 0.55, 0), 110); }
+    else { pluckSound(783.99, 0.4, 0); setTimeout(() => pluckSound(523.25, 0.35, 0), 110); }
+  }
+  if (at) burst(at, playOn ? 26 : 10);
+}
 function handState(k) {
   if (!hands[k]) hands[k] = { pts: null, seen: 0, pinch: false, pinchPt: null, tip: null, prevTip: null,
-                              midContact: false, midContactT: 0, snapT: 0, size: 100 };
+                              midContact: false, midContactT: 0, snapT: 0, size: 100,
+                              fist: false, fistT: 0, fistUsed: false, fistEndT: 0 };
   return hands[k];
 }
 
@@ -365,9 +378,20 @@ function updateHands(res, now) {
     const dIdx = Math.hypot(P[4].x - P[8].x, P[4].y - P[8].y) / h.size;
     const dMid = Math.hypot(P[4].x - P[12].x, P[4].y - P[12].y) / h.size;
     h.pinchPt = { x: (P[4].x + P[8].x) / 2, y: (P[4].y + P[8].y) / 2 };
+    lastAnyHand = now;
+
+    // Кулак: кончики пальцев ближе к запястью, чем их средние суставы
+    const d0 = i => Math.hypot(P[i].x - P[0].x, P[i].y - P[0].y);
+    let folded = 0;
+    for (const [tp, pp] of [[8, 6], [12, 10], [16, 14], [20, 18]]) if (d0(tp) < d0(pp)) folded++;
+    const idxFolded = d0(8) < d0(6);
+    if (!h.fist && folded >= 3 && idxFolded) { h.fist = true; h.fistT = now; h.fistUsed = false; }
+    else if (h.fist && folded <= 1) { h.fist = false; h.fistEndT = now; }
+    if (h.fist && !h.fistUsed && now - h.fistT > 600) { h.fistUsed = true; togglePlay(now, { x: P[9].x, y: P[9].y }); }
 
     const was = h.pinch;
-    if (!h.pinch && dIdx < 0.28) h.pinch = true;
+    if (!playOn || h.fist || now - h.fistEndT < 400) h.pinch = false;
+    else if (!h.pinch && dIdx < 0.28) h.pinch = true;
     else if (h.pinch && dIdx > 0.45) h.pinch = false;
     if (h.pinch && !was) startPinch(k);
     if (!h.pinch && was) endPinch(k);
@@ -376,7 +400,7 @@ function updateHands(res, now) {
     if (!h.midContact && dMid < 0.3 && dIdx > 0.45) { h.midContact = true; h.midContactT = now; }
     else if (h.midContact && dMid > 0.6) {
       h.midContact = false;
-      if (now - h.midContactT < 450 && now - h.snapT > 500) {
+      if (playOn && !h.fist && now - h.fistEndT > 600 && now - h.midContactT < 450 && now - h.snapT > 500) {
         h.snapT = now;
         snap({ x: (P[4].x + P[12].x) / 2, y: (P[4].y + P[12].y) / 2 });
       }
@@ -461,15 +485,16 @@ function segInter(p, p2, a, b) {
 }
 
 function checkPlucks(now) {
+  if (!playOn) return;
   for (const k of ['A', 'B']) {
     const h = hands[k];
     if (!h || !h.pts || !h.prevTip || !h.tip) continue;
-    if (h.pinch && mode !== 'song') continue;
+    if ((h.pinch && mode !== 'song') || h.fist || now - h.fistEndT < 400) continue;
     if (creating && (creating.mode === 'two' || creating.key === k)) continue;
     const p0 = h.prevTip, p1 = h.tip;
     rearm(p1, k);
     const sp = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-    if (sp < 3) continue;
+    if (sp < 5) continue;
     for (const s of activeStrings()) {
       const u = segInter(p0, p1, s.a, s.b);
       if (u === null) continue;
@@ -599,8 +624,17 @@ function drawHands(now) {
     if (!h || !h.pts || now - h.seen > 300) continue;
     const P = h.pts;
     ctx.save();
+    if (h.fist && !h.fistUsed) { // кольцо: сколько ещё держать кулак
+      const pr = Math.min(1, (now - h.fistT) / 600);
+      ctx.save();
+      ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.strokeStyle = playOn ? '#ffd27a' : '#7dffa0';
+      ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 16;
+      ctx.beginPath(); ctx.arc(P[9].x, P[9].y, h.size * 1.15, -Math.PI / 2, -Math.PI / 2 + pr * Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.globalAlpha = playOn ? 1 : 0.45;
     ctx.lineWidth = 3; ctx.lineCap = 'round';
-    ctx.strokeStyle = '#2bd14b';
+    ctx.strokeStyle = playOn ? '#2bd14b' : '#9aa0b4';
     ctx.beginPath();
     for (const [i, j] of CONN) { ctx.moveTo(P[i].x, P[i].y); ctx.lineTo(P[j].x, P[j].y); }
     ctx.stroke();
@@ -689,7 +723,7 @@ for (const s of SONGS) {
   }
 }
 
-let mode = 'free', song = null, demo = null, laneY = 120, noCam = false, rhythmOn = false, lastPointerT = 0;
+let mode = 'free', song = null, demo = null, laneY = 120, noCam = false, rhythmOn = false, lastPointerT = -1e9;
 const sStrings = [];
 const songbarEl = document.getElementById('songbar');
 const libEl = document.getElementById('lib');
@@ -1068,6 +1102,21 @@ function loop() {
       const n = creating.note;
       drawString({ a: creating.a, b: creating.b, freq: n.freq, name: n.name, label: n.label, letter: n.letter, t0: now }, now, true);
       drawRuler(n.idx);
+    }
+  }
+  if (landmarker && !noCam) {
+    if (playOn && now - lastAnyHand > 5000) playOn = false; // ушёл от камеры — снова замок
+    const handsVisible = now - lastAnyHand < 600;
+    let msg = null;
+    if (now - playT < 1400 && playT > 0) msg = playOn ? '🔓 Играем! Кулак ещё раз — пауза' : '🔒 Пауза. Сожми кулак, чтобы играть';
+    else if (!playOn && handsVisible && now - lastPointerT > 6000) msg = '✊ Сожми кулак на секунду — и играй';
+    if (msg) {
+      ctx.save();
+      ctx.font = '700 17px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const tw = ctx.measureText(msg).width + 30, y = mode === 'song' ? H - 150 : H * 0.5;
+      ctx.fillStyle = 'rgba(10,6,24,0.66)'; pill(W / 2 - tw / 2, y - 21, tw, 42, 21); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.fillText(msg, W / 2, y + 0.5);
+      ctx.restore();
     }
   }
   if (landmarker && !noCam && now - lastPointerT > 6000 && now - Math.max(hands.A ? hands.A.seen : 0, hands.B ? hands.B.seen : 0) > 2500) {
