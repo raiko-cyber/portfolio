@@ -97,7 +97,8 @@
 
 <div id="hud">
   <b>Как играть</b><br>
-  ✊ Натянул(а) струны? Сожми кулак — отсчёт 3-2-1, и струны закрепятся: играешь на них, а новые не добавляются. Ещё раз кулак — снова можно добавлять<br>
+  ✊ Сначала сожми кулак — отсчёт 3-2-1, и игра начнётся (до этого ничего не звучит)<br>
+  ✊ Натянул(а) струны? Ещё раз кулак — отсчёт, и струны закрепятся: играешь на них, а новые не добавляются. Кулак снова — можно добавлять<br>
   🤏 Сведи большой и указательный на <b>обеих</b> руках и разведи руки — натянешь струну<br>
   🤏 Или щипок одной рукой и потяни — струна от точки до точки<br>
   ☝️ Проведи указательным пальцем сквозь струну — она зазвучит<br>
@@ -108,7 +109,7 @@
 </div>
 <div id="btns">
   <button id="songsBtn">🎵 Песни</button>
-  <button id="lockBtn">🔒 Закрепить струны</button>
+  <button id="lockBtn">▶ Начать</button>
   <button id="undo">Отменить</button>
   <button id="clear">Очистить</button>
   <button id="help">Подсказка</button>
@@ -315,13 +316,19 @@ function toScreen(lm, R) { // зеркально, как в зеркале
 
 const hands = {};
 // Закрепить струны: в этом режиме свои струны играют, а новые не добавляются (щипок ничего не создаёт)
-let locked = false, lockT = 0, lastAnyHand = 0, countdown = null;
+let started = false, locked = false, lockT = 0, lastAnyHand = 0, countdown = null; // started=false — начальная пауза
 const COUNT_FROM = 3; // отсчёт перед закреплением: 3, 2, 1
 // Кулак (или кнопка): в режиме создания — отсчёт 3-2-1 и закрепить; если закреплено — сразу снова можно добавлять
 function fistAction(now, at) {
   if (mode === 'song') return;
-  if (locked) { setLocked(false, now, at); return; }
-  if (!countdown) { countdown = { t0: now, last: COUNT_FROM }; tickSound(); if (at) burst(at, 10); updateLockBtn(); }
+  if (started && locked) { setLocked(false, now, at); return; }
+  if (!countdown) { countdown = { t0: now, last: COUNT_FROM, goal: started ? 'lock' : 'start' }; tickSound(); if (at) burst(at, 10); updateLockBtn(); }
+}
+function startPlaying(now, at) {
+  started = true; lockT = now;
+  if (ac) { pluckSound(392, 0.5, 0); setTimeout(() => pluckSound(523.25, 0.5, 0), 110); setTimeout(() => pluckSound(659.25, 0.55, 0), 220); }
+  if (at) burst(at, 30);
+  updateLockBtn();
 }
 function setLocked(v, now, at) {
   locked = v; lockT = now;
@@ -336,7 +343,7 @@ function setLocked(v, now, at) {
 function updateLockBtn() {
   const b = document.getElementById('lockBtn');
   if (!b) return;
-  b.textContent = countdown ? '⏳ …' : locked ? '✏️ Добавлять струны' : '🔒 Закрепить струны';
+  b.textContent = countdown ? '⏳ …' : !started ? '▶ Начать' : locked ? '✏️ Добавлять струны' : '🔒 Закрепить струны';
   b.classList.toggle('on', locked);
 }
 function handState(k) {
@@ -406,7 +413,7 @@ function updateHands(res, now) {
     if (h.fist && !h.fistUsed && now - h.fistT > 350) { h.fistUsed = true; fistAction(now, { x: P[9].x, y: P[9].y }); }
 
     const was = h.pinch;
-    if (locked || countdown || h.fist || now - h.fistEndT < 400) h.pinch = false;
+    if (!started || locked || countdown || h.fist || now - h.fistEndT < 400) h.pinch = false;
     else if (!h.pinch && dIdx < 0.28) h.pinch = true;
     else if (h.pinch && dIdx > 0.45) h.pinch = false;
     if (h.pinch && !was) startPinch(k);
@@ -416,7 +423,7 @@ function updateHands(res, now) {
     if (!h.midContact && dMid < 0.3 && dIdx > 0.45) { h.midContact = true; h.midContactT = now; }
     else if (h.midContact && dMid > 0.6) {
       h.midContact = false;
-      if (!h.fist && now - h.fistEndT > 600 && now - h.midContactT < 450 && now - h.snapT > 500) {
+      if (started && !h.fist && now - h.fistEndT > 600 && now - h.midContactT < 450 && now - h.snapT > 500) {
         h.snapT = now;
         snap({ x: (P[4].x + P[12].x) / 2, y: (P[4].y + P[12].y) / 2 });
       }
@@ -501,6 +508,7 @@ function segInter(p, p2, a, b) {
 }
 
 function checkPlucks(now) {
+  if (!started && mode !== 'song') return; // начальная пауза
   for (const k of ['A', 'B']) {
     const h = hands[k];
     if (!h || !h.pts || !h.prevTip || !h.tip) continue;
@@ -648,7 +656,8 @@ function drawHands(now) {
       ctx.restore();
     }
     ctx.lineWidth = 3; ctx.lineCap = 'round';
-    ctx.strokeStyle = locked ? '#b9a4ff' : '#2bd14b';
+    if (!started && mode !== 'song') ctx.globalAlpha = 0.45;
+    ctx.strokeStyle = !started && mode !== 'song' ? '#9aa0b4' : locked ? '#b9a4ff' : '#2bd14b';
     ctx.beginPath();
     for (const [i, j] of CONN) { ctx.moveTo(P[i].x, P[i].y); ctx.lineTo(P[j].x, P[j].y); }
     ctx.stroke();
@@ -1120,7 +1129,11 @@ function loop() {
   }
   if (countdown) {
     const left = COUNT_FROM - (now - countdown.t0) / 1000;
-    if (left <= 0 || mode === 'song') { const was = countdown; countdown = null; if (mode !== 'song' && was) setLocked(true, now, { x: W / 2, y: H * 0.45 }); else updateLockBtn(); }
+    if (left <= 0 || mode === 'song') {
+      const was = countdown; countdown = null;
+      if (mode !== 'song' && was) { if (was.goal === 'start') startPlaying(now, { x: W / 2, y: H * 0.45 }); else setLocked(true, now, { x: W / 2, y: H * 0.45 }); }
+      else updateLockBtn();
+    }
     else {
       const n = Math.ceil(left), frac = left - Math.floor(left);
       if (n !== countdown.last) { countdown.last = n; tickSound(); }
@@ -1134,7 +1147,7 @@ function loop() {
       ctx.restore();
       ctx.save();
       ctx.font = '700 18px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      const cap = 'Закрепляю струны… приготовь руки';
+      const cap = countdown.goal === 'start' ? 'Начинаем… приготовь руки' : 'Закрепляю струны… приготовь руки';
       const tw = ctx.measureText(cap).width + 30, cy = H * 0.45 + 130;
       ctx.fillStyle = 'rgba(10,6,24,0.66)'; pill(W / 2 - tw / 2, cy - 21, tw, 42, 21); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.fillText(cap, W / 2, cy + 0.5);
@@ -1143,8 +1156,13 @@ function loop() {
   }
   if (mode !== 'song' && !countdown && startEl.style.display === 'none') {
     let msg = null, big = false;
-    if (lockT > 0 && now - lockT < 2000) { big = true; msg = locked ? (W < 560 ? '🔒 Закреплено — играй!' : '🔒 Струны закреплены — играй! Новые не добавятся') : '✏️ Можно добавлять струны'; }
-    else msg = locked ? (W < 400 ? '🔒 Закреплено · ✊ — добавить ещё' : '🔒 Струны закреплены · ✊ кулак — добавить ещё') : (strings.length ? (W < 400 ? '✏️ Создание · ✊ — закрепить' : '✏️ Создание струн · ✊ кулак — закрепить') : null);
+    const handsSeen = now - lastAnyHand < 600;
+    if (!started) {
+      if (landmarker && handsSeen && now - lastPointerT > 6000) { big = true; msg = '✊ Сожми кулак — начнём: 3, 2, 1'; }
+      else msg = W < 400 ? '⏸ Пауза · ✊ — начать' : '⏸ Пауза · ✊ кулак или «Начать»';
+    }
+    else if (lockT > 0 && now - lockT < 2000) { big = true; msg = locked ? (W < 560 ? '🔒 Закреплено — играй!' : '🔒 Струны закреплены — играй! Новые не добавятся') : (strings.length ? '✏️ Можно добавлять струны' : '🎶 Играем! Натягивай струны щипком'); }
+    else if (started) msg = locked ? (W < 400 ? '🔒 Закреплено · ✊ — добавить ещё' : '🔒 Струны закреплены · ✊ кулак — добавить ещё') : (strings.length ? (W < 400 ? '✏️ Создание · ✊ — закрепить' : '✏️ Создание струн · ✊ кулак — закрепить') : null);
     if (msg) {
       ctx.save();
       ctx.font = `700 ${big ? 17 : 13.5}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
