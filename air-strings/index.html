@@ -96,7 +96,7 @@
 
 <div id="hud">
   <b>Как играть</b><br>
-  ✊ Сначала сожми кулак на секунду — игра включится. Ещё раз кулак — пауза<br>
+  ✊ Сожми кулак — пойдёт отсчёт 3-2-1, и можно играть. Кулак во время игры — пауза<br>
   🤏 Сведи большой и указательный на <b>обеих</b> руках и разведи руки — натянешь струну<br>
   🤏 Или щипок одной рукой и потяни — струна от точки до точки<br>
   ☝️ Проведи указательным пальцем сквозь струну — она зазвучит<br>
@@ -313,7 +313,13 @@ function toScreen(lm, R) { // зеркально, как в зеркале
 
 const hands = {};
 // Замок: пока не сожмёшь кулак, движения рук не играют (чтобы случайные движения не звучали)
-let playOn = false, playT = 0, lastAnyHand = 0;
+let playOn = false, playT = 0, lastAnyHand = 0, countdown = null;
+const COUNT_FROM = 3; // отсчёт перед игрой: 3, 2, 1
+// Кулак: на паузе — запускает отсчёт 3-2-1, во время игры — сразу ставит паузу
+function fistAction(now, at) {
+  if (playOn) { togglePlay(now, at); return; }
+  if (!countdown) { countdown = { t0: now, last: COUNT_FROM }; tickSound(); burst(at, 10); }
+}
 function togglePlay(now, at) {
   playOn = !playOn; playT = now;
   if (creating) finalize();
@@ -387,7 +393,7 @@ function updateHands(res, now) {
     const idxFolded = d0(8) < d0(6);
     if (!h.fist && folded >= 3 && idxFolded) { h.fist = true; h.fistT = now; h.fistUsed = false; }
     else if (h.fist && folded <= 1) { h.fist = false; h.fistEndT = now; }
-    if (h.fist && !h.fistUsed && now - h.fistT > 600) { h.fistUsed = true; togglePlay(now, { x: P[9].x, y: P[9].y }); }
+    if (h.fist && !h.fistUsed && now - h.fistT > 350) { h.fistUsed = true; fistAction(now, { x: P[9].x, y: P[9].y }); }
 
     const was = h.pinch;
     if (!playOn || h.fist || now - h.fistEndT < 400) h.pinch = false;
@@ -624,8 +630,8 @@ function drawHands(now) {
     if (!h || !h.pts || now - h.seen > 300) continue;
     const P = h.pts;
     ctx.save();
-    if (h.fist && !h.fistUsed) { // кольцо: сколько ещё держать кулак
-      const pr = Math.min(1, (now - h.fistT) / 600);
+    if (h.fist && !h.fistUsed && !countdown) { // кольцо: сколько ещё держать кулак
+      const pr = Math.min(1, (now - h.fistT) / 350);
       ctx.save();
       ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.strokeStyle = playOn ? '#ffd27a' : '#7dffa0';
       ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 16;
@@ -1105,11 +1111,35 @@ function loop() {
     }
   }
   if (landmarker && !noCam) {
-    if (playOn && now - lastAnyHand > 5000) playOn = false; // ушёл от камеры — снова замок
+    if ((playOn || countdown) && now - lastAnyHand > 5000) { playOn = false; countdown = null; } // ушёл от камеры — снова замок
     const handsVisible = now - lastAnyHand < 600;
+    if (countdown) {
+      const left = COUNT_FROM - (now - countdown.t0) / 1000;
+      if (left <= 0) { countdown = null; if (!playOn) togglePlay(now, { x: W / 2, y: H * 0.45 }); }
+      else {
+        const n = Math.ceil(left), frac = left - Math.floor(left);
+        if (n !== countdown.last) { countdown.last = n; tickSound(); }
+        ctx.save();
+        ctx.translate(W / 2, H * 0.45);
+        ctx.scale(0.8 + 0.4 * frac, 0.8 + 0.4 * frac);
+        ctx.globalAlpha = 0.4 + 0.6 * frac;
+        ctx.font = '800 190px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ffffff'; ctx.shadowColor = '#b9a4ff'; ctx.shadowBlur = 44;
+        ctx.fillText(String(n), 0, 0);
+        ctx.restore();
+        ctx.save();
+        ctx.font = '700 18px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const cap = 'Приготовь руки… можно разжать кулак';
+        const tw = ctx.measureText(cap).width + 30, cy = H * 0.45 + 130;
+        ctx.fillStyle = 'rgba(10,6,24,0.66)'; pill(W / 2 - tw / 2, cy - 21, tw, 42, 21); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.fillText(cap, W / 2, cy + 0.5);
+        ctx.restore();
+      }
+    }
     let msg = null;
-    if (now - playT < 1400 && playT > 0) msg = playOn ? '🔓 Играем! Кулак ещё раз — пауза' : '🔒 Пауза. Сожми кулак, чтобы играть';
-    else if (!playOn && handsVisible && now - lastPointerT > 6000) msg = '✊ Сожми кулак на секунду — и играй';
+    if (countdown) msg = null;
+    else if (now - playT < 1600 && playT > 0) msg = playOn ? '🔓 Играй! Кулак ещё раз — пауза' : '🔒 Пауза. Сожми кулак — будет отсчёт 3-2-1';
+    else if (!playOn && handsVisible && now - lastPointerT > 6000) msg = '✊ Сожми кулак — начнём отсчёт 3-2-1';
     if (msg) {
       ctx.save();
       ctx.font = '700 17px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
